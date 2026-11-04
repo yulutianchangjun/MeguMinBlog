@@ -2,7 +2,8 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import SparkField from '@/components/common/SparkField.vue'
+import FireRain from '@/components/layout/FireRain.vue'
+import { resolveAsset } from '@/lib/asset'
 import TypewriterText from '@/components/common/TypewriterText.vue'
 import PostCard from '@/components/post/PostCard.vue'
 import { site } from '@/data/site'
@@ -64,10 +65,10 @@ function goBoard() {
 <template>
   <div class="home">
     <section class="hero mage-card">
-      <SparkField :count="22" />
-      <!-- TODO: 将这里的图片设置为覆盖整个框 -->
-      <img class="hero-art" src="/assets/megumin/castle-banner.png" alt="" />
+      <img class="hero-art" src="/assets/megumin/castle-banner.webp" alt="" />
       <div class="hero-veil"></div>
+      <span class="hero-dust"></span>
+      <FireRain inline :count="54" class="hero-rain" />
       <span class="corner tl"></span>
       <span class="corner tr"></span>
       <span class="corner bl"></span>
@@ -156,7 +157,11 @@ function goBoard() {
                 class="marquee-item"
                 @click="goBoard"
               >
-                <span class="author">{{ msg.author }}</span>
+                <span class="author">
+                  <i class="tag-dot"></i>
+                  {{ msg.author }}
+                  <em v-if="msg.pinned">置顶</em>
+                </span>
                 <span class="text">{{ msg.content }}</span>
                 <span class="dia">◆</span>
               </button>
@@ -241,7 +246,7 @@ function goBoard() {
           class="series-card mage-card"
         >
           <div class="series-cover">
-            <img v-if="item.cover" :src="`./${item.cover}`" :alt="item.title" loading="lazy" />
+            <img v-if="item.cover" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
             <div class="series-veil"></div>
             <span class="series-rune">{{ item.runes }}</span>
           </div>
@@ -285,15 +290,13 @@ function goBoard() {
 
 .hero-art {
   position: absolute;
-  /* right: 0%;
-  bottom: -12%;
+  inset: 0;
   width: 100%;
-  max-width: 640px; */
-  object-fit: contain;
-  mix-blend-mode: multiply;
-  filter: contrast(1.06) saturate(1.12) brightness(1.08);
-  -webkit-mask-image: radial-gradient(74% 78% at 58% 46%, #000 42%, rgba(0, 0, 0, 0.55) 66%, transparent 88%);
-  mask-image: radial-gradient(74% 78% at 58% 46%, #000 42%, rgba(0, 0, 0, 0.55) 66%, transparent 88%);
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  transform: scale(1.015);
+  filter: brightness(0.72) saturate(1.04) contrast(1.02);
   z-index: 0;
   pointer-events: none;
 }
@@ -303,8 +306,32 @@ function goBoard() {
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(100deg, rgba(18, 14, 22, 0.96) 32%, rgba(20, 15, 24, 0.6) 58%, rgba(18, 14, 22, 0.25) 100%),
-    linear-gradient(180deg, transparent 60%, rgba(14, 11, 18, 0.9) 100%);
+    linear-gradient(96deg, rgba(14, 10, 18, 0.94) 0%, rgba(15, 11, 19, 0.78) 38%, rgba(16, 12, 20, 0.32) 100%),
+    linear-gradient(180deg, rgba(16, 12, 20, 0.28) 0%, rgba(14, 10, 18, 0.55) 62%, rgba(13, 9, 16, 0.95) 100%);
+}
+
+.hero-dust {
+  position: absolute;
+  right: 2%;
+  bottom: 0;
+  width: 44%;
+  height: 30%;
+  background: var(--tex-stardust) right bottom / contain no-repeat;
+  opacity: 0.26;
+  z-index: 2;
+  filter: drop-shadow(0 0 12px rgba(255, 176, 84, 0.3));
+  animation: dustFloat 9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hero-rain {
+  position: absolute;
+  z-index: 2;
+}
+
+@keyframes dustFloat {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.22; }
+  50% { transform: translateY(-8px) scale(1.02); opacity: 0.32; }
 }
 
 
@@ -394,7 +421,7 @@ function goBoard() {
   border-radius: 999px;
   border: 1px solid rgba(217, 172, 88, 0.3);
   background: rgba(16, 12, 21, 0.62);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(5px);
 }
 
 .hero-tag img {
@@ -512,15 +539,21 @@ function goBoard() {
 }
 
 .marquee {
+  flex: 1;
+  display: flex;
+  align-items: center;
   overflow: hidden;
-  padding: 16px 0;
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  padding: 14px 0 16px;
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
 }
 
 .marquee-track {
   display: flex;
+  align-items: stretch;
+  gap: 12px;
   width: max-content;
-  animation: marquee 34s linear infinite;
+  padding-left: 18px;
+  animation: marquee 52s linear infinite;
 }
 
 .marquee:hover .marquee-track {
@@ -528,34 +561,75 @@ function goBoard() {
 }
 
 .marquee-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 18px;
-  border: 0;
-  background: transparent;
+  flex: 0 0 252px;
+  min-height: 136px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 16px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 172, 88, 0.16);
+  background:
+    linear-gradient(158deg, rgba(52, 38, 46, 0.62), rgba(24, 19, 30, 0.78));
   color: var(--c-text-2);
   font-size: 12.5px;
+  text-align: left;
+  white-space: normal;
   cursor: pointer;
-  white-space: nowrap;
+  transition: border-color 0.26s var(--ease), transform 0.26s var(--ease), background 0.26s var(--ease);
+}
+
+.marquee-item:nth-child(even) {
+  transform: rotate(-0.4deg);
+}
+
+.marquee-item:hover {
+  border-color: rgba(217, 172, 88, 0.42);
+  background: linear-gradient(158deg, rgba(70, 44, 52, 0.7), rgba(28, 21, 34, 0.85));
+  transform: translateY(-3px) rotate(0deg);
 }
 
 .marquee-item .author {
-  color: var(--c-gold);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-gold-2);
   font-family: var(--font-display);
-  letter-spacing: 0.05em;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+}
+
+.marquee-item .author em {
+  font-style: normal;
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  padding: 0 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(242, 219, 166, 0.35);
+  color: var(--c-gold);
 }
 
 .marquee-item .text {
-  max-width: 300px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.9;
+  font-size: 12px;
+  color: var(--c-text-2);
   transition: color 0.24s var(--ease);
 }
 
 .marquee-item:hover .text {
   color: var(--c-paper);
+}
+
+.marquee-item .dia {
+  margin-top: auto;
+  align-self: flex-end;
+  font-size: 9px;
+  color: rgba(217, 172, 88, 0.5);
 }
 
 .marquee-item .dia {
@@ -800,7 +874,7 @@ function goBoard() {
 
 @keyframes marquee {
   to {
-    transform: translateX(-50%);
+    transform: translateX(calc(-50% - 6px));
   }
 }
 
@@ -833,12 +907,16 @@ function goBoard() {
     min-height: 0;
   }
   .hero-art {
-    right: -18%;
-    width: 78%;
-    opacity: 0.5;
+    object-position: 64% center;
+    filter: brightness(0.5) saturate(1.02);
   }
   .hero-veil {
-    background: linear-gradient(100deg, rgba(18, 14, 22, 0.96) 42%, rgba(18, 14, 22, 0.72) 100%);
+    background:
+      linear-gradient(100deg, rgba(13, 9, 16, 0.95) 30%, rgba(15, 11, 19, 0.82) 70%, rgba(16, 12, 20, 0.6) 100%),
+      linear-gradient(180deg, rgba(16, 12, 20, 0.3), rgba(13, 9, 16, 0.9));
+  }
+  .hero-dust {
+    display: none;
   }
   .hero-stats {
     gap: 12px;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import { readingMinutes } from '@/lib/markdown'
+import { resolveAsset } from '@/lib/asset'
 import { useInteractionStore } from '@/stores/interaction'
 import type { Post } from '@/types'
 
@@ -16,14 +16,7 @@ const props = withDefaults(
 
 const interaction = useInteractionStore()
 
-const asset = (path?: string) => {
-  if (!path) return ''
-  if (/^(https?:)?\/\//.test(path) || path.startsWith('data:')) return path
-  return `./${path.replace(/^\.?\//, '')}`
-}
-
-const cover = computed(() => asset(props.post.cover))
-const minutes = computed(() => readingMinutes(props.post.content))
+const cover = computed(() => resolveAsset(props.post.cover))
 const comments = computed(() => interaction.commentCount(props.post.id))
 const likes = computed(() => interaction.likeTotal(props.post.id))
 const day = computed(() => props.post.date.slice(5).replace('-', ' / '))
@@ -33,10 +26,13 @@ const year = computed(() => props.post.date.slice(0, 4))
 <template>
   <router-link :to="`/posts/${post.id}`" class="post-card mage-card" :class="{ compact }">
     <div class="cover">
-      <img v-if="cover" :src="cover" :alt="post.title" loading="lazy" />
-      <div v-else class="fallback">
-        <span class="fallback-seal"></span>
-        <span class="fallback-rune">EXPLOSION</span>
+      <div class="art-mat">
+        <img v-if="cover" class="art-blur" :src="cover" alt="" aria-hidden="true" loading="lazy" />
+        <img v-if="cover" class="art-main" :src="cover" :alt="post.title" loading="lazy" />
+        <div v-else class="fallback">
+          <span class="fallback-star"></span>
+          <span class="fallback-rune">EXPLOSION</span>
+        </div>
       </div>
       <div class="cover-veil"></div>
       <span v-if="post.pinned" class="pin">
@@ -61,7 +57,6 @@ const year = computed(() => props.post.date.slice(0, 4))
       <p v-if="showExcerpt" class="excerpt">{{ post.excerpt }}</p>
 
       <div class="meta">
-        <span><MagicIcon name="clock" :size="12" />{{ minutes }} 分钟</span>
         <span><MagicIcon name="comment" :size="12" />{{ comments }}</span>
         <span><MagicIcon name="heart" :size="12" />{{ likes }}</span>
         <span class="read">
@@ -88,56 +83,105 @@ const year = computed(() => props.post.date.slice(0, 4))
 
 .cover {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 4 / 3;
+  padding: 10px 10px 0;
   overflow: hidden;
-  background: radial-gradient(82% 92% at 50% 18%, #93404f 0%, #5a2430 55%, #2c141d 100%);
+  background:
+    radial-gradient(90% 80% at 50% 0%, rgba(120, 48, 58, 0.5), rgba(26, 18, 26, 0.96) 72%),
+    linear-gradient(160deg, #241a24, #171220);
 }
 
 .compact .cover {
-  aspect-ratio: 21 / 8;
+  aspect-ratio: 16 / 7;
 }
 
-.cover img {
+.art-mat {
+  position: relative;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 22%;
-  transform: scale(1.02);
-  transition: transform 0.6s var(--ease), filter 0.5s var(--ease);
-  mix-blend-mode: multiply;
-  filter: contrast(1.03) brightness(1.2) saturate(1.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 7px 7px 0 0;
+  border: 1px solid rgba(217, 172, 88, 0.16);
+  border-bottom: 0;
+  background: rgba(11, 8, 14, 0.62);
 }
 
-.post-card:hover .cover img {
-  transform: scale(1.07);
-  filter: contrast(1.05) brightness(1.3) saturate(1.14);
+.art-mat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--tex-grid) center / cover no-repeat;
+  mix-blend-mode: soft-light;
+  opacity: 0.1;
+  pointer-events: none;
+}
+
+.art-mat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 34px rgba(10, 6, 12, 0.62),
+    inset 0 0 10px rgba(10, 6, 12, 0.4);
+}
+
+.art-blur {
+  position: absolute;
+  inset: -8%;
+  width: 116%;
+  height: 116%;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(6px) brightness(0.5) saturate(1.1);
+  opacity: 0.75;
+}
+
+.art-main {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  transition: transform 0.6s var(--ease), filter 0.5s var(--ease);
+  filter: saturate(1.04) brightness(0.98);
+}
+
+.post-card:hover .art-main {
+  transform: scale(1.035);
+  filter: saturate(1.1) brightness(1.04);
 }
 
 .fallback {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(120% 100% at 20% 0%, rgba(165, 42, 54, 0.4), transparent 60%),
-    repeating-linear-gradient(135deg, rgba(217, 172, 88, 0.06) 0 1px, transparent 1px 14px),
+    radial-gradient(120% 100% at 20% 0%, rgba(165, 42, 54, 0.32), transparent 60%),
+    var(--tex-grid) center / cover no-repeat,
     linear-gradient(160deg, #2a1d29, #171320);
+  background-blend-mode: normal, soft-light, normal;
   display: grid;
   place-items: center;
 }
 
-.fallback-seal {
+.fallback-star {
   position: absolute;
-  width: 62%;
+  width: 46%;
   aspect-ratio: 1;
-  background: url('/assets/megumin/magic-circle.png') center/contain no-repeat;
-  opacity: 0.28;
-  mix-blend-mode: screen;
-  animation: spin 60s linear infinite;
+  background: var(--tex-star) center/contain no-repeat;
+  opacity: 0.42;
+  filter: drop-shadow(0 0 18px rgba(255, 176, 84, 0.35));
 }
 
 .fallback-rune {
   position: absolute;
-  bottom: 12px;
-  right: 14px;
+  bottom: 14px;
+  right: 16px;
   font-family: var(--font-display);
   font-size: 10px;
   letter-spacing: 0.4em;
@@ -147,10 +191,10 @@ const year = computed(() => props.post.date.slice(0, 4))
 .cover-veil {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background:
-    radial-gradient(120% 70% at 50% 0%, rgba(18, 11, 18, 0.55), transparent 62%),
-    radial-gradient(120% 90% at 50% 100%, rgba(165, 42, 54, 0.28), transparent 62%),
-    linear-gradient(180deg, rgba(15, 11, 19, 0.12) 30%, rgba(18, 14, 24, 0.86) 100%);
+    linear-gradient(180deg, transparent 62%, rgba(16, 11, 20, 0.62) 100%),
+    radial-gradient(120% 60% at 50% 100%, rgba(165, 42, 54, 0.22), transparent 70%);
 }
 
 .pin,
@@ -288,9 +332,4 @@ h3 {
   font-size: 16px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 </style>

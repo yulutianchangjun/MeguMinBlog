@@ -6,7 +6,7 @@ categories:
   - 爆裂魔法
   - 随笔
 collections: explosion-theory
-cover: assets/megumin/pentagram.png
+cover: assets/megumin/smoke.png
 excerpt: 一个能炸平山丘的人，最先要学会的不是控制威力，而是判断「这一发该不该放」。
 ---
 

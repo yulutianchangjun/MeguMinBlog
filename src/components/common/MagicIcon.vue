@@ -73,7 +73,7 @@ const strokeWidth = computed(() => (props.filled ? 0.9 : props.stroke))
 const isFilled = computed(
   () =>
     props.filled ||
-    ['play', 'heart', 'star', 'spark', 'github', 'pause'].includes(props.name),
+    ['play', 'heart', 'star', 'spark', 'github'].includes(props.name),
 )
 </script>
 

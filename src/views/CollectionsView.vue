@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import RuneSeal from '@/components/common/RuneSeal.vue'
+import { resolveAsset } from '@/lib/asset'
 import { useContentStore } from '@/stores/content'
 
 const content = useContentStore()
@@ -52,8 +52,8 @@ onMounted(() => {
 <template>
   <div class="collections">
     <header class="head mage-card tint-primary">
-      <RuneSeal class="head-seal" :size="360" :opacity="0.16" :duration="110" reverse />
-      <img class="head-seal" src="/assets/megumin/head-seal.jpeg"/>
+      <img class="head-bg" src="/assets/megumin/head-seal.webp" alt="" />
+      <div class="head-veil"></div>
       <div class="head-inner">
         <span class="eyebrow"><i class="tag-dot"></i>Series · 综集</span>
         <h1>把散落的手记<br /><span class="gold-text">装订成册</span></h1>
@@ -92,7 +92,7 @@ onMounted(() => {
           :class="{ dim: i !== active }"
         >
           <div class="cover">
-            <img v-if="item.cover" :src="`./${item.cover}`" :alt="item.title" loading="lazy" />
+            <img v-if="item.cover" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
             <div class="cover-veil"></div>
             <span class="index">{{ String(i + 1).padStart(2, '0') }}</span>
             <span class="runes">{{ item.runes }}</span>
@@ -143,19 +143,32 @@ onMounted(() => {
 
 .head {
   position: relative;
+  min-height: 236px;
   padding: 40px 40px 34px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
   overflow: hidden;
+  background: linear-gradient(150deg, #2a1a26, #171220);
 }
 
-.head-seal {
+.head-bg {
   position: absolute;
-  right: -60px;
-  top: -90px;
-  mix-blend-mode: screen;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  filter: brightness(0.6) saturate(1.02);
+}
+
+.head-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(96deg, rgba(13, 9, 16, 0.92) 0%, rgba(15, 11, 19, 0.72) 46%, rgba(16, 12, 20, 0.28) 100%),
+    linear-gradient(180deg, rgba(16, 12, 20, 0.2), rgba(13, 9, 16, 0.9));
 }
 
 .head-inner {

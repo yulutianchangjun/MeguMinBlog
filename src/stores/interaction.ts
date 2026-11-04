@@ -8,7 +8,15 @@ export const useInteractionStore = defineStore('interaction', () => {
   const comments = ref<Comment[]>(readJSON<Comment[]>('comments', [...seedComments]))
   const likes = ref<Record<string, number>>(readJSON('likes', { ...seedLikes }))
   const liked = ref<Record<string, boolean>>(readJSON('liked', {}))
-  const messages = ref<BoardMessage[]>(readJSON<BoardMessage[]>('messages', [...seedMessages]))
+  const normalizeTexture = (texture: string): BoardTexture =>
+    texture === 'magic' ? 'stars' : (texture as BoardTexture)
+
+  const storedMessages = readJSON<BoardMessage[]>('messages', [...seedMessages]).map((message) => ({
+    ...message,
+    texture: normalizeTexture(message.texture),
+  }))
+
+  const messages = ref<BoardMessage[]>(storedMessages)
 
   function saveComments() {
     writeJSON('comments', comments.value)

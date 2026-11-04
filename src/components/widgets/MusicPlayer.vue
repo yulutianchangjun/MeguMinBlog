@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import { ChimePlayer, tunes } from '@/lib/chime'
+import { toast } from '@/lib/toast'
 
 const player = new ChimePlayer()
 const index = ref(0)
@@ -31,8 +32,13 @@ async function toggle() {
     playing.value = false
     return
   }
-  await player.play()
-  playing.value = true
+  try {
+    await player.play()
+    playing.value = true
+  } catch {
+    playing.value = false
+    toast.warning('浏览器拦截了音频播放，请再点一次播放按钮')
+  }
 }
 
 function step(delta: number) {
@@ -57,11 +63,16 @@ function onVolume(event: Event) {
 
     <div class="disc-row">
       <div class="disc" :class="{ spin: playing }">
-        <img src="/assets/megumin/magic-circle-small.png" alt="" />
+        <span class="groove"></span>
+        <span class="groove inner"></span>
+        <span class="label"></span>
         <span class="hole"></span>
       </div>
       <div class="meta">
-        <strong>{{ tune.title }}</strong>
+        <div class="title-row">
+          <strong>{{ tune.title }}</strong>
+          <span class="eq" :class="{ on: playing }" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        </div>
         <span class="sub">{{ tune.subtitle }}</span>
         <div class="progress">
           <span :style="{ width: `${Math.max(2, progress * 100)}%` }"></span>
@@ -73,8 +84,13 @@ function onVolume(event: Event) {
       <button class="ctrl" title="上一首" @click="step(-1)">
         <MagicIcon name="prev" :size="15" />
       </button>
-      <button class="ctrl main" :title="playing ? '暂停' : '播放'" @click="toggle">
-        <MagicIcon :name="playing ? 'pause' : 'play'" :size="17" />
+      <button
+        class="ctrl main"
+        :title="playing ? '暂停' : '播放'"
+        :aria-pressed="playing"
+        @click="toggle"
+      >
+        <MagicIcon :name="playing ? 'pause' : 'play'" :size="16" />
       </button>
       <button class="ctrl" title="下一首" @click="step(1)">
         <MagicIcon name="next" :size="15" />
@@ -130,16 +146,29 @@ function onVolume(event: Event) {
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8), 0 6px 16px -10px #000;
 }
 
-.disc img {
-  width: 78%;
-  height: 78%;
-  object-fit: contain;
-  opacity: 0.75;
-  mix-blend-mode: screen;
-}
-
 .disc.spin {
   animation: discSpin 5s linear infinite;
+}
+
+.groove {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 172, 88, 0.16);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.015);
+}
+
+.groove.inner {
+  inset: 16px;
+  border-color: rgba(217, 172, 88, 0.12);
+}
+
+.label {
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, rgba(165, 42, 54, 0.75), rgba(74, 24, 34, 0.9));
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6);
 }
 
 .hole {
@@ -149,6 +178,52 @@ function onVolume(event: Event) {
   border-radius: 50%;
   background: #0f0c13;
   border: 1px solid rgba(217, 172, 88, 0.5);
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+  opacity: 0;
+  transition: opacity 0.24s var(--ease);
+}
+
+.eq.on {
+  opacity: 0.9;
+}
+
+.eq i {
+  width: 2px;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--c-gold);
+  animation: eqBeat 1s ease-in-out infinite;
+}
+
+.eq i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.eq i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+.eq i:nth-child(4) {
+  animation-delay: 0.54s;
+}
+
+@keyframes eqBeat {
+  0%, 100% {
+    height: 3px;
+  }
+  50% {
+    height: 9px;
+  }
 }
 
 .meta {

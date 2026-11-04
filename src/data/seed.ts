@@ -123,7 +123,7 @@ export const seedMessages: BoardMessage[] = [
     wall: 'right',
     bgColor: '#A52A36',
     fontColor: '#F4EBDD',
-    texture: 'magic',
+    texture: 'stars',
     rotation: -1.4,
     pinned: true,
     isAdmin: true,

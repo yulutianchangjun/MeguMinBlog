@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted } from 'vue'
 import { NConfigProvider, NMessageProvider, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
-import BackgroundMagic from '@/components/layout/BackgroundMagic.vue'
+import FireRain from '@/components/layout/FireRain.vue'
 import LeftSidebar from '@/components/layout/LeftSidebar.vue'
 import RightSidebar from '@/components/layout/RightSidebar.vue'
 import LoginModal from '@/components/admin/LoginModal.vue'
@@ -80,7 +80,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   <n-config-provider :theme="darkTheme" :theme-overrides="overrides">
     <n-message-provider>
       <div class="app-root">
-        <BackgroundMagic />
+        <FireRain />
         <AppHeader />
         <div class="shell">
           <div class="layout-grid">

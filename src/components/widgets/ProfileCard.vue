@@ -46,7 +46,7 @@ onBeforeUnmount(() => window.clearTimeout(clickTimer))
 <template>
   <section class="profile mage-card">
     <div class="banner">
-      <img src="/assets/megumin/castle-banner.png" alt="" />
+      <img src="/assets/megumin/castle-banner.webp" alt="" />
       <div class="banner-fade"></div>
       <span class="banner-rune">MEGUMIN</span>
     </div>

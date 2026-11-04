@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import CommentSection from '@/components/post/CommentSection.vue'
 import { renderMarkdown, readingMinutes } from '@/lib/markdown'
+import { resolveAsset } from '@/lib/asset'
 import { formatDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/auth'
@@ -29,12 +30,7 @@ const accessible = computed(() => {
 
 const rendered = computed(() => renderMarkdown(post.value?.content ?? ''))
 const minutes = computed(() => readingMinutes(post.value?.content ?? ''))
-const cover = computed(() => {
-  const path = post.value?.cover
-  if (!path) return ''
-  if (/^(https?:)?\/\//.test(path)) return path
-  return `./${path.replace(/^\.?\//, '')}`
-})
+const cover = computed(() => resolveAsset(post.value?.cover))
 const likes = computed(() => interaction.likeTotal(post.value?.id ?? ''))
 const liked = computed(() => interaction.hasLiked(post.value?.id ?? ''))
 const commentCount = computed(() => interaction.commentCount(post.value?.id ?? ''))
@@ -145,7 +141,6 @@ onBeforeUnmount(() => {
     <header class="hero mage-card" :class="{ 'no-cover': !cover }">
       <img v-if="cover" :src="cover" class="hero-bg" :alt="post.title" />
       <div class="hero-veil"></div>
-      <span class="hero-seal"></span>
       <div class="hero-content">
         <nav class="crumbs">
           <router-link to="/">首页</router-link>
@@ -179,8 +174,12 @@ onBeforeUnmount(() => {
       </div>
     </header>
 
-    <div class="body mage-card">
+    <div class="body mage-card paper-veil">
       <div class="prose" v-html="rendered.html"></div>
+
+      <div class="scroll-end" aria-hidden="true">
+        <span class="scroll-word">手记终</span>
+      </div>
 
       <div v-if="post.tags.length" class="tags">
         <MagicIcon name="spark" :size="12" />
@@ -261,9 +260,8 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 26%;
-  mix-blend-mode: multiply;
-  filter: contrast(1.03) brightness(1.2) saturate(1.08);
+  object-position: center center;
+  filter: brightness(0.78) saturate(1.04);
   transform: scale(1.03);
 }
 
@@ -271,21 +269,9 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(96deg, rgba(11, 8, 15, 0.86) 0%, rgba(13, 9, 17, 0.55) 52%, rgba(16, 11, 20, 0.3) 100%),
+    linear-gradient(96deg, rgba(10, 7, 14, 0.92) 0%, rgba(12, 8, 16, 0.66) 52%, rgba(16, 11, 20, 0.34) 100%),
     linear-gradient(180deg, rgba(15, 11, 19, 0.3) 0%, rgba(16, 12, 21, 0.78) 58%, rgba(18, 13, 24, 0.98) 100%),
     linear-gradient(100deg, rgba(120, 30, 45, 0.32), transparent 62%);
-}
-
-.hero-seal {
-  position: absolute;
-  right: -70px;
-  top: -60px;
-  width: 320px;
-  height: 320px;
-  background: url('/assets/megumin/magic-circle.png') center/contain no-repeat;
-  opacity: 0.18;
-  animation: spin 80s linear infinite;
-  mix-blend-mode: screen;
 }
 
 .hero-content {
@@ -428,6 +414,43 @@ onBeforeUnmount(() => {
   padding: 34px 40px 26px;
 }
 
+.body > * {
+  position: relative;
+  z-index: 1;
+}
+
+.scroll-end {
+  position: relative;
+  width: 320px;
+  max-width: 82%;
+  aspect-ratio: 760 / 616;
+  margin: 32px auto 10px;
+  background: var(--tex-scroll) center / 100% 100% no-repeat;
+  opacity: 0.82;
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.55));
+}
+
+.scroll-end::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.scroll-word {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  transform: translate(-50%, -50%) rotate(-1.6deg);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  color: #7d3a28;
+  text-indent: 0.42em;
+}
+
 .tags {
   display: flex;
   align-items: center;
@@ -538,7 +561,7 @@ onBeforeUnmount(() => {
   background: rgba(22, 17, 29, 0.88);
   color: var(--c-text-2);
   cursor: pointer;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(5px);
   box-shadow: 0 14px 30px -18px #000;
   transition: all 0.26s var(--ease);
 }

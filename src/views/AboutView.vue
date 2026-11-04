@@ -114,6 +114,13 @@ const stack = [
       </div>
     </section>
 
+    <section class="scroll-quote" aria-label="手记摘句">
+      <div class="scroll-frame">
+        <p>「爆炸之后，总有些东西值得留下来。」</p>
+        <span>—— 惠惠，写于第三百次爆裂之后</span>
+      </div>
+    </section>
+
     <section class="site-info mage-card">
       <div class="panel-title"><span>Colophon</span><span class="cn">关于本站</span></div>
       <div class="info-body">
@@ -427,6 +434,39 @@ const stack = [
   color: var(--c-muted);
 }
 
+.scroll-quote {
+  position: relative;
+  width: min(100%, 660px);
+  margin: 0 auto;
+  aspect-ratio: 760 / 616;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tex-scroll) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.55));
+}
+
+.scroll-frame {
+  width: 72%;
+  margin-top: -2%;
+  text-align: center;
+  color: #6d3524;
+}
+
+.scroll-frame p {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(14px, 1.4vw, 18px);
+  line-height: 1.95;
+  letter-spacing: 0.06em;
+}
+
+.scroll-frame span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #8a5a3f;
+}
+
 .info-body {
   padding: 18px;
   display: grid;
@@ -491,7 +531,40 @@ const stack = [
   .duo {
     grid-template-columns: 1fr;
   }
-  .info-body {
+  .scroll-quote {
+  position: relative;
+  width: min(100%, 660px);
+  margin: 0 auto;
+  aspect-ratio: 760 / 616;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tex-scroll) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 22px 34px rgba(0, 0, 0, 0.55));
+}
+
+.scroll-frame {
+  width: 72%;
+  margin-top: -2%;
+  text-align: center;
+  color: #6d3524;
+}
+
+.scroll-frame p {
+  margin: 0 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(14px, 1.4vw, 18px);
+  line-height: 1.95;
+  letter-spacing: 0.06em;
+}
+
+.scroll-frame span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #8a5a3f;
+}
+
+.info-body {
     grid-template-columns: 1fr;
   }
 }

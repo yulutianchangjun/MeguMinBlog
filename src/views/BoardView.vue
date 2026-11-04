@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { NModal } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import { formatDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
@@ -17,6 +18,7 @@ const walls: { key: BoardWall; label: string; en: string; hint: string }[] = [
 ]
 
 const capacity = 5
+const previewMessage = ref<BoardMessage | null>(null)
 const batches = ref(1)
 const composing = ref(false)
 const activeWall = ref<BoardWall>('top')
@@ -35,8 +37,7 @@ const fontPalette = ['#3A2027', '#4A3218', '#22303C', '#2C4234', '#8E2634', '#F4
 const textures: { key: BoardTexture; label: string }[] = [
   { key: 'none', label: '素纸' },
   { key: 'paper', label: '羊皮纸' },
-  { key: 'magic', label: '魔法帽' },
-  { key: 'grid', label: '方格' },
+  { key: 'grid', label: '方格纸' },
   { key: 'stars', label: '星屑' },
 ]
 
@@ -87,9 +88,36 @@ const totalCards = computed(() => interaction.messages.length)
 const sealedBatches = computed(() => Math.max(0, totalBatches.value - 1))
 
 const previewStyle = computed(() => ({
-  background: form.value.bgColor,
+  backgroundColor: form.value.bgColor,
   color: form.value.fontColor,
 }))
+
+const previewOpen = computed({
+  get: () => Boolean(previewMessage.value),
+  set: (value: boolean) => {
+    if (!value) previewMessage.value = null
+  },
+})
+
+const previewWall = computed(
+  () => walls.find((wall) => wall.key === previewMessage.value?.wall)?.label ?? '',
+)
+
+const previewBatch = computed(() => {
+  const message = previewMessage.value
+  if (!message) return 1
+  const list = wallBatches.value[message.wall]
+  const index = list.findIndex((batch) => batch.some((item) => item.id === message.id))
+  return index >= 0 ? index + 1 : 1
+})
+
+function openMessage(message: BoardMessage) {
+  previewMessage.value = message
+}
+
+function fullTime(value: number) {
+  return formatDate(value, 'YYYY.MM.DD HH:mm')
+}
 
 const currentWallHint = computed(() => walls.find((w) => w.key === form.value.wall)?.hint ?? '')
 
@@ -207,6 +235,7 @@ onMounted(() => {
       <span class="nail tr"></span>
       <span class="nail bl"></span>
       <span class="nail br"></span>
+      <span class="cork-tex" aria-hidden="true"></span>
 
       <div class="board">
         <div class="wall top">
@@ -217,7 +246,11 @@ onMounted(() => {
               :key="message.id"
               class="note"
               :class="[`t-${message.texture}`, { pinned: message.pinned }]"
-              :style="{ background: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
+              :style="{ backgroundColor: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
+              role="button"
+              tabindex="0"
+              @click="openMessage(message)"
+              @keydown.enter="openMessage(message)"
             >
               <span class="pin"></span>
               <p class="note-text">{{ message.content }}</p>
@@ -226,8 +259,8 @@ onMounted(() => {
                 <span>{{ timeLabel(message.createdAt) }}</span>
               </div>
               <div v-if="auth.isAdmin" class="note-tools">
-                <button title="置顶" @click="togglePin(message)"><MagicIcon name="pin" :size="11" /></button>
-                <button title="取下" @click="remove(message)"><MagicIcon name="trash" :size="11" /></button>
+                <button title="置顶" @click.stop="togglePin(message)"><MagicIcon name="pin" :size="11" /></button>
+                <button title="取下" @click.stop="remove(message)"><MagicIcon name="trash" :size="11" /></button>
               </div>
             </article>
             <span v-for="slot in capacity - cardsOf('top').length" :key="`top-slot-${slot}`" class="empty-slot"></span>
@@ -242,7 +275,11 @@ onMounted(() => {
               :key="message.id"
               class="note side"
               :class="[`t-${message.texture}`, { pinned: message.pinned }]"
-              :style="{ background: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
+              :style="{ backgroundColor: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
+              role="button"
+              tabindex="0"
+              @click="openMessage(message)"
+              @keydown.enter="openMessage(message)"
             >
               <span class="pin left-pin"></span>
               <p class="note-text">{{ message.content }}</p>
@@ -251,8 +288,8 @@ onMounted(() => {
                 <span>{{ timeLabel(message.createdAt) }}</span>
               </div>
               <div v-if="auth.isAdmin" class="note-tools">
-                <button title="置顶" @click="togglePin(message)"><MagicIcon name="pin" :size="11" /></button>
-                <button title="取下" @click="remove(message)"><MagicIcon name="trash" :size="11" /></button>
+                <button title="置顶" @click.stop="togglePin(message)"><MagicIcon name="pin" :size="11" /></button>
+                <button title="取下" @click.stop="remove(message)"><MagicIcon name="trash" :size="11" /></button>
               </div>
             </article>
             <span v-for="slot in capacity - cardsOf('left').length" :key="`left-slot-${slot}`" class="empty-slot side"></span>
@@ -356,7 +393,6 @@ onMounted(() => {
             </div>
 
             <div v-else key="info" class="board-info">
-              <span class="info-seal"></span>
               <span class="info-rune">MAGIC BOARD</span>
               <h2>三面钉板</h2>
               <p>
@@ -379,6 +415,12 @@ onMounted(() => {
                 </div>
               </div>
 
+              <ul class="info-rules">
+                <li><i></i>每面墙一批 5 张，钉满即封存</li>
+                <li><i></i>点击任意卡片可放大阅读</li>
+                <li><i></i>底色、字色与纸纹都可自定义</li>
+              </ul>
+
               <button class="btn-magic full" @click="openComposer(activeWall)">
                 <MagicIcon name="plus" :size="14" />
                 钉一张卡
@@ -399,7 +441,11 @@ onMounted(() => {
               :key="message.id"
               class="note side"
               :class="[`t-${message.texture}`, { pinned: message.pinned }]"
-              :style="{ background: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
+              :style="{ backgroundColor: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
+              role="button"
+              tabindex="0"
+              @click="openMessage(message)"
+              @keydown.enter="openMessage(message)"
             >
               <span class="pin right-pin"></span>
               <p class="note-text">{{ message.content }}</p>
@@ -408,8 +454,8 @@ onMounted(() => {
                 <span>{{ timeLabel(message.createdAt) }}</span>
               </div>
               <div v-if="auth.isAdmin" class="note-tools">
-                <button title="置顶" @click="togglePin(message)"><MagicIcon name="pin" :size="11" /></button>
-                <button title="取下" @click="remove(message)"><MagicIcon name="trash" :size="11" /></button>
+                <button title="置顶" @click.stop="togglePin(message)"><MagicIcon name="pin" :size="11" /></button>
+                <button title="取下" @click.stop="remove(message)"><MagicIcon name="trash" :size="11" /></button>
               </div>
             </article>
             <span v-for="slot in capacity - cardsOf('right').length" :key="`right-slot-${slot}`" class="empty-slot side"></span>
@@ -417,6 +463,54 @@ onMounted(() => {
         </div>
       </div>
     </section>
+
+    <n-modal
+      v-if="previewMessage"
+      v-model:show="previewOpen"
+      :mask-closable="true"
+      transform-origin="center"
+    >
+      <div class="note-modal mage-card">
+        <button class="modal-close" aria-label="关闭" @click="previewOpen = false">
+          <MagicIcon name="close" :size="15" />
+        </button>
+        <div class="modal-head">
+          <span class="eyebrow"><i class="tag-dot"></i>Message · {{ previewWall }}</span>
+          <span class="modal-batch">第 {{ previewBatch }} 批 · 软木墙</span>
+        </div>
+
+        <div
+          class="note-full"
+          :class="`t-${previewMessage.texture}`"
+          :style="{ backgroundColor: previewMessage.bgColor, color: previewMessage.fontColor }"
+        >
+          <span class="modal-pin"></span>
+          <p class="note-full-text">{{ previewMessage.content }}</p>
+          <div class="note-full-sign">
+            <strong>{{ previewMessage.author }}</strong>
+            <em>{{ fullTime(previewMessage.createdAt) }}</em>
+          </div>
+        </div>
+
+        <div class="modal-foot">
+          <span class="modal-meta">
+            <MagicIcon name="pin" :size="12" />
+            {{ previewWall }} · {{ previewMessage.texture === 'none' ? '素纸' : previewMessage.texture === 'paper' ? '羊皮纸' : previewMessage.texture === 'grid' ? '方格纸' : '星屑' }}
+            <em v-if="previewMessage.pinned">已置顶</em>
+          </span>
+          <div v-if="auth.isAdmin" class="modal-actions">
+            <button class="mini-btn" @click="togglePin(previewMessage)">
+              <MagicIcon name="pin" :size="12" />
+              {{ previewMessage.pinned ? '取消置顶' : '置顶' }}
+            </button>
+            <button class="mini-btn danger" @click="remove(previewMessage); previewOpen = false">
+              <MagicIcon name="trash" :size="12" />
+              取下
+            </button>
+          </div>
+        </div>
+      </div>
+    </n-modal>
 
     <section class="archive mage-card">
       <div class="archive-head">
@@ -460,13 +554,13 @@ onMounted(() => {
 .head::after {
   content: '';
   position: absolute;
-  right: -40px;
-  top: -60px;
-  width: 260px;
-  height: 260px;
-  background: url('/assets/megumin/pentagram.png') center/contain no-repeat;
-  opacity: 0.12;
-  transform: rotate(10deg);
+  right: -10px;
+  top: -40px;
+  width: 320px;
+  height: 150px;
+  background: var(--tex-stardust) right top / contain no-repeat;
+  opacity: 0.24;
+  pointer-events: none;
 }
 
 .head-inner {
@@ -632,7 +726,18 @@ onMounted(() => {
   right: 8px;
 }
 
+.cork-tex {
+  position: absolute;
+  inset: 0;
+  background: var(--tex-grid) center / 300px auto repeat;
+  opacity: 0.075;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
 .board {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 176px minmax(0, 1fr) 176px;
   grid-template-areas:
@@ -711,6 +816,7 @@ onMounted(() => {
 .note {
   position: relative;
   padding: 14px 12px 10px;
+  cursor: pointer;
   border-radius: 3px;
   min-height: 118px;
   display: flex;
@@ -724,8 +830,13 @@ onMounted(() => {
 }
 
 .note.side {
-  min-height: 96px;
-  padding: 13px 11px 9px;
+  min-height: 86px;
+  padding: 12px 10px 8px;
+}
+
+.note:focus-visible {
+  outline: 2px solid rgba(242, 219, 166, 0.7);
+  outline-offset: 3px;
 }
 
 .note:hover {
@@ -840,34 +951,26 @@ onMounted(() => {
 
 /* 纸纹 */
 .t-paper {
-  background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 40%),
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.025) 0 1px, transparent 1px 3px);
-}
-
-.t-magic::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: url('/assets/megumin/magic-circle-small.png') center/78% no-repeat;
-  opacity: 0.14;
-  mix-blend-mode: multiply;
-  pointer-events: none;
-  border-radius: inherit;
+  background-image: var(--tex-parchment);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode: multiply;
 }
 
 .t-grid {
-  background-image:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 16px),
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 16px);
+  background-image: var(--tex-grid);
+  background-size: 340px auto;
+  background-position: center;
+  background-repeat: repeat;
+  background-blend-mode: multiply;
 }
 
 .t-stars {
-  background-image:
-    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.45) 0 1px, transparent 1px),
-    radial-gradient(circle at 72% 36%, rgba(255, 255, 255, 0.35) 0 1px, transparent 1px),
-    radial-gradient(circle at 42% 78%, rgba(255, 255, 255, 0.4) 0 1px, transparent 1px),
-    radial-gradient(circle at 88% 82%, rgba(255, 255, 255, 0.3) 0 1px, transparent 1px);
+  background-image: var(--tex-star), var(--tex-star);
+  background-size: 34px auto, 20px auto;
+  background-position: right 10px top 10px, left 10px bottom 12px;
+  background-repeat: no-repeat, no-repeat;
 }
 
 .empty-slot {
@@ -878,7 +981,7 @@ onMounted(() => {
 }
 
 .empty-slot.side {
-  min-height: 96px;
+  min-height: 86px;
 }
 
 /* ---------- 中央面板 ---------- */
@@ -902,29 +1005,9 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.board-info > *:not(.info-seal) {
+.board-info > * {
   position: relative;
   z-index: 1;
-}
-
-.info-seal {
-  position: absolute;
-  left: 50%;
-  bottom: -70px;
-  width: 230px;
-  height: 230px;
-  margin-left: -115px;
-  background: url('/assets/megumin/magic-circle.png') center/contain no-repeat;
-  opacity: 0.16;
-  animation: spin 90s linear infinite;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .info-rune {
@@ -985,6 +1068,36 @@ onMounted(() => {
 
 .dots i.on {
   background: linear-gradient(90deg, #a52a36, #d9ac58);
+}
+
+.info-rules {
+  list-style: none;
+  margin: 2px 0 4px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px dashed rgba(242, 219, 166, 0.18);
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.info-rules li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--c-text-2);
+  letter-spacing: 0.02em;
+}
+
+.info-rules i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--c-gold);
+  box-shadow: 0 0 6px rgba(217, 172, 88, 0.7);
+  flex: none;
 }
 
 .btn-magic.full {
@@ -1210,6 +1323,149 @@ onMounted(() => {
   color: #fff3e0;
   border-color: rgba(242, 219, 166, 0.5);
   background: rgba(165, 42, 54, 0.4);
+}
+
+/* ---------- 放大预览 ---------- */
+
+.note-modal {
+  position: relative;
+  width: min(92vw, 560px);
+  padding: 22px 22px 18px;
+  background:
+    radial-gradient(120% 100% at 85% 0%, rgba(165, 42, 54, 0.28), transparent 58%),
+    linear-gradient(160deg, #2a2230, #191420 62%, #141019);
+  border-color: rgba(217, 172, 88, 0.32);
+  box-shadow: 0 50px 90px -50px #000;
+}
+
+.modal-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 172, 88, 0.2);
+  background: rgba(16, 12, 20, 0.6);
+  color: var(--c-text-2);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.modal-close:hover {
+  color: var(--c-gold-2);
+  border-color: rgba(217, 172, 88, 0.5);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-right: 30px;
+}
+
+.modal-batch {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--c-muted);
+}
+
+.note-full {
+  position: relative;
+  min-height: 280px;
+  padding: 34px 28px 22px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    0 18px 30px -18px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transform: rotate(-0.6deg);
+}
+
+.modal-pin {
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #ffb1a0, #a52a36 65%, #5c121c);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.55), 0 0 10px rgba(199, 60, 75, 0.4);
+}
+
+.note-full-text {
+  margin: 0 0 24px;
+  font-size: 15.5px;
+  line-height: 2.05;
+  letter-spacing: 0.02em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.note-full-sign {
+  margin-top: auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.note-full-sign strong {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.note-full-sign em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.modal-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--c-muted);
+  letter-spacing: 0.04em;
+}
+
+.modal-meta em {
+  font-style: normal;
+  color: var(--c-gold);
+  border: 1px solid rgba(217, 172, 88, 0.3);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.mini-btn.danger {
+  color: #ffb3bd;
+  border-color: rgba(199, 60, 75, 0.35);
 }
 
 /* ---------- 档案 ---------- */

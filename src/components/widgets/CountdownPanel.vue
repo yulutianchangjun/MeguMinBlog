@@ -89,9 +89,9 @@ const openedDays = computed(() => today.diff(dayjs(siteStartDate).startOf('day')
   bottom: -34px;
   width: 110px;
   height: 110px;
-  background: url('/assets/megumin/pentagram.png') center/contain no-repeat;
-  opacity: 0.14;
-  transform: rotate(12deg);
+  background: var(--tex-star) center/contain no-repeat;
+  opacity: 0.22;
+  filter: drop-shadow(0 0 18px rgba(255, 176, 84, 0.35));
 }
 
 .label {

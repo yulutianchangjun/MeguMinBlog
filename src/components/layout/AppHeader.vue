@@ -53,8 +53,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
     <div class="header-inner">
       <router-link to="/" class="brand" aria-label="返回首页">
         <span class="sigil">
-          <img src="/assets/megumin/magic-circle-small.png" alt="" />
-          <span class="sigil-core"></span>
+          <MagicIcon name="flame" :size="19" />
         </span>
         <span class="brand-text">
           <strong>{{ site.title }}</strong>
@@ -129,7 +128,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   transition: background 0.35s var(--ease), box-shadow 0.35s var(--ease), border-color 0.35s var(--ease);
   border-bottom: 1px solid rgba(217, 172, 88, 0.12);
   background: linear-gradient(180deg, rgba(19, 16, 23, 0.9), rgba(19, 16, 23, 0.62));
-  backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(6px) saturate(1.05);
 }
 
 .app-header::after {
@@ -169,26 +168,15 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
   position: relative;
   width: 42px;
   height: 42px;
-  display: grid;
-  place-items: center;
-}
-
-.sigil img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  opacity: 0.85;
-  filter: drop-shadow(0 0 10px rgba(165, 42, 54, 0.6));
-  animation: slowSpin 26s linear infinite;
-}
-
-.sigil-core {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--c-gold);
-  box-shadow: 0 0 14px rgba(217, 172, 88, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid rgba(217, 172, 88, 0.32);
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(199, 60, 75, 0.5), rgba(36, 20, 28, 0.9) 70%);
+  color: var(--c-gold-2);
+  box-shadow: inset 0 0 14px rgba(255, 176, 84, 0.14), 0 6px 16px -12px #000;
 }
 
 .brand-text {
@@ -329,12 +317,6 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
 
 .mobile-nav {
   display: none;
-}
-
-@keyframes slowSpin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes pulse {

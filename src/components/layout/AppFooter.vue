@@ -20,7 +20,7 @@ function openAdminHint() {
     <div class="footer-inner">
       <div class="brand-mini">
         <span class="seal">
-          <img src="/assets/megumin/magic-circle-small.png" alt="" />
+          <MagicIcon name="flame" :size="15" />
         </span>
         <div>
           <strong>{{ site.title }}</strong>
@@ -78,14 +78,14 @@ function openAdminHint() {
 .seal {
   width: 34px;
   height: 34px;
-  opacity: 0.65;
-}
-
-.seal img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 0 8px rgba(165, 42, 54, 0.6));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 172, 88, 0.22);
+  background: rgba(38, 24, 30, 0.8);
+  color: var(--c-gold);
+  opacity: 0.8;
 }
 
 .brand-mini strong {

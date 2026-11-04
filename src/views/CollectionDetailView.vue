@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import { resolveAsset } from '@/lib/asset'
 import PostCard from '@/components/post/PostCard.vue'
 import { useContentStore } from '@/stores/content'
 
@@ -14,11 +15,7 @@ const posts = computed(() =>
   content.publicPosts.filter((post) => post.collections.includes(String(route.params.id))),
 )
 
-const cover = computed(() => {
-  const path = collection.value?.cover
-  if (!path) return ''
-  return `./${path.replace(/^\.?\//, '')}`
-})
+const cover = computed(() => resolveAsset(collection.value?.cover))
 
 const categories = computed(() => {
   const set = new Set<string>()

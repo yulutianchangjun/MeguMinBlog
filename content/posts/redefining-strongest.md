@@ -5,7 +5,7 @@ date: 2026-10-30
 categories:
   - 随笔
   - 魔法研究
-cover: assets/megumin/magic-circle-small.png
+cover: assets/megumin/megumin-full.png
 excerpt: 我曾经以为最强就是最大的爆炸。现在我觉得，最强是一种能够被信任的力量。
 ---
 

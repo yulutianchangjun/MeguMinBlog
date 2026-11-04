@@ -31,4 +31,12 @@
   --max-w: 1480px;
   --gutter: 24px;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* 本地纹理资产 */
+  --tex-parchment: url('/assets/textures/parchment-fill.jpg');
+  --tex-scroll: url('/assets/textures/parchment-scroll.webp');
+  --tex-grid: url('/assets/textures/grid-fill.jpg');
+  --tex-grid-paper: url('/assets/textures/grid-paper.webp');
+  --tex-stardust: url('/assets/textures/stardust.webp');
+  --tex-star: url('/assets/textures/star-1.webp');
 }

@@ -3,11 +3,14 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDrawer, NPopconfirm } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import ImageUploader from '@/components/admin/ImageUploader.vue'
 import { siteStartDate } from '@/data/posts'
 import { exportJson, exportZip, parseImportFile } from '@/lib/exporter'
 import { formatDate } from '@/lib/format'
 import { renderMarkdown, slugify } from '@/lib/markdown'
-import { STORAGE_PREFIX } from '@/lib/storage'
+import { postFromMarkdown } from '@/lib/post'
+import { resolveAsset } from '@/lib/asset'
+import { STORAGE_PREFIX, uid } from '@/lib/storage'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useContentStore } from '@/stores/content'
@@ -15,7 +18,7 @@ import { useInteractionStore } from '@/stores/interaction'
 import { useProfileStore } from '@/stores/profile'
 import { useUiStore } from '@/stores/ui'
 import type { AdminTab } from '@/stores/ui'
-import type { Post } from '@/types'
+import type { Collection, Post } from '@/types'
 
 const ui = useUiStore()
 const content = useContentStore()
@@ -31,6 +34,7 @@ const show = computed({
 
 const tabs: { key: AdminTab; label: string; en: string; icon: string }[] = [
   { key: 'posts', label: '文章管理', en: 'Posts', icon: 'book' },
+  { key: 'collections', label: '综集管理', en: 'Series', icon: 'layers' },
   { key: 'data', label: '导入导出', en: 'Data', icon: 'upload' },
   { key: 'stats', label: '数据仪表', en: 'Stats', icon: 'eye' },
 ]
@@ -44,7 +48,10 @@ const saving = ref(false)
 const importing = ref(false)
 const importLog = ref<{ name: string; posts: number; comments: number; messages: number }[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
+const mdInput = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
+const collectionDraft = ref<Collection | null>(null)
+const collectionIsNew = ref(false)
 
 const totalLikes = computed(() =>
   content.allPosts.reduce((sum, post) => sum + interaction.likeTotal(post.id), 0),
@@ -169,6 +176,87 @@ function save() {
 function remove(post: Post) {
   content.deletePost(post.id)
   toast.info(`已删除《${post.title}》`)
+}
+
+async function onMdPick(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  try {
+    const raw = await file.text()
+    const parsed = postFromMarkdown(raw, file.name.replace(/\.md$/i, ''))
+    const base = editing.value
+    editing.value = {
+      ...parsed,
+      id: base?.id ?? '',
+      date: parsed.date,
+      source: base?.source,
+    }
+    catText.value = parsed.categories.join('，')
+    tagText.value = parsed.tags.join('，')
+    preview.value = false
+    toast.success(`已解析「${parsed.title}」，检查后保存即可`)
+  } catch {
+    toast.error('Markdown 解析失败，请检查 Frontmatter 格式')
+  } finally {
+    input.value = ''
+  }
+}
+
+function collectionCount(id: string): number {
+  return content.publicPosts.filter((post) => post.collections.includes(id)).length
+}
+
+function newCollection() {
+  collectionIsNew.value = true
+  collectionDraft.value = {
+    id: '',
+    title: '',
+    subtitle: '',
+    description: '',
+    cover: '',
+    order: content.collections.length + 1,
+  }
+}
+
+function editCollection(collection: Collection) {
+  collectionIsNew.value = false
+  collectionDraft.value = { ...collection }
+}
+
+function uniqueCollectionId(title: string): string {
+  let id = slugify(title) || `series-${uid()}`
+  let index = 2
+  while (content.collections.some((item) => item.id === id) && id !== collectionDraft.value?.id) {
+    id = `${slugify(title)}-${index}`
+    index += 1
+  }
+  return id
+}
+
+function saveCollectionDraft() {
+  const draft = collectionDraft.value
+  if (!draft) return
+  if (!draft.title.trim()) {
+    toast.warning('综集名称不能为空')
+    return
+  }
+  const payload: Collection = {
+    ...draft,
+    title: draft.title.trim(),
+    subtitle: draft.subtitle?.trim() ?? '',
+    description: draft.description?.trim() ?? '',
+    id: collectionIsNew.value || !draft.id ? uniqueCollectionId(draft.title) : draft.id,
+  }
+  content.saveCollection(payload)
+  collectionDraft.value = null
+  collectionIsNew.value = false
+  toast.success('综集已保存')
+}
+
+function removeCollection(collection: Collection) {
+  content.deleteCollection(collection.id)
+  toast.info(`已删除综集《${collection.title}》`)
 }
 
 function openPost(post: Post) {
@@ -317,6 +405,11 @@ function logout() {
                 返回列表
               </button>
               <span class="editor-title">{{ isNew ? '新建手记' : '编辑手记' }}</span>
+              <button class="btn-magic ghost small" @click="mdInput?.click()">
+                <MagicIcon name="book" :size="13" />
+                导入 .md
+              </button>
+              <input ref="mdInput" type="file" accept=".md,text/markdown" hidden @change="onMdPick" />
               <button class="btn-magic small" :disabled="saving" @click="save">
                 <MagicIcon name="check" :size="13" />
                 保存
@@ -340,21 +433,17 @@ function logout() {
                   <input v-model="editing.date" type="date" />
                 </label>
                 <label class="field">
-                  <span>封面图地址</span>
-                  <input v-model="editing.cover" placeholder="assets/megumin/… 或外链" />
-                </label>
-              </div>
-
-              <div class="row-2">
-                <label class="field">
-                  <span>分类（逗号分隔，可多个）</span>
-                  <input v-model="catText" placeholder="爆裂魔法，手记" />
-                </label>
-                <label class="field">
                   <span>标签</span>
                   <input v-model="tagText" placeholder="荒野，咏唱" />
                 </label>
               </div>
+
+              <label class="field">
+                <span>分类（逗号分隔，可多个）</span>
+                <input v-model="catText" placeholder="爆裂魔法，手记" />
+              </label>
+
+              <ImageUploader v-model="editing.cover" label="封面图" />
 
               <div class="field">
                 <span>归属综集</span>
@@ -444,6 +533,90 @@ function logout() {
                       <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
                     </template>
                     删除《{{ post.title }}》？删除后可通过重置恢复内置文章。
+                  </n-popconfirm>
+                </div>
+              </li>
+            </ul>
+          </template>
+        </template>
+
+        <!-- 综集管理 -->
+        <template v-else-if="ui.adminTab === 'collections'">
+          <template v-if="collectionDraft">
+            <div class="editor-head">
+              <button class="back" @click="collectionDraft = null">
+                <MagicIcon name="arrowLeft" :size="13" />
+                返回列表
+              </button>
+              <span class="editor-title">{{ collectionIsNew ? '添加综集' : '编辑综集' }}</span>
+              <button class="btn-magic small" @click="saveCollectionDraft">
+                <MagicIcon name="check" :size="13" />
+                保存
+              </button>
+            </div>
+
+            <div class="editor">
+              <label class="field">
+                <span>综集名称</span>
+                <input v-model="collectionDraft.title" placeholder="例如：爆裂魔法理论" />
+              </label>
+              <label class="field">
+                <span>英文副标题</span>
+                <input v-model="collectionDraft.subtitle" placeholder="Explosion Theory" />
+              </label>
+              <label class="field">
+                <span>简介</span>
+                <textarea
+                  v-model="collectionDraft.description"
+                  rows="3"
+                  placeholder="一两句话说明这一册收录什么"
+                ></textarea>
+              </label>
+              <ImageUploader v-model="collectionDraft.cover" label="综集封面" />
+              <p class="editor-tip">
+                <MagicIcon name="spark" :size="11" />
+                新综集会立刻出现在综集页与首页速览中，文章可在编辑时勾选归属。
+              </p>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="toolbar">
+              <div class="summary">
+                <span><strong>{{ content.collections.length }}</strong> 个综集</span>
+                <span><strong>{{ content.publicPosts.length }}</strong> 篇手记</span>
+              </div>
+              <button class="btn-magic small" @click="newCollection">
+                <MagicIcon name="plus" :size="13" />
+                添加综集
+              </button>
+            </div>
+
+            <ul class="post-list">
+              <li v-for="item in content.collections" :key="item.id" class="post-row">
+                <img
+                  v-if="item.cover"
+                  class="series-thumb"
+                  :src="resolveAsset(item.cover)"
+                  :alt="item.title"
+                />
+                <div class="row-main">
+                  <div class="row-title">
+                    <strong>{{ item.title }}</strong>
+                    <span class="badge gold">{{ collectionCount(item.id) }} 篇</span>
+                  </div>
+                  <div class="row-meta">
+                    <span>{{ item.subtitle || '未设英文名' }}</span>
+                    <span>{{ item.id }}</span>
+                  </div>
+                </div>
+                <div class="row-actions">
+                  <button title="编辑" @click="editCollection(item)"><MagicIcon name="edit" :size="13" /></button>
+                  <n-popconfirm @positive-click="removeCollection(item)">
+                    <template #trigger>
+                      <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
+                    </template>
+                    删除综集《{{ item.title }}》？其下文章不会被删除。
                   </n-popconfirm>
                 </div>
               </li>
@@ -866,7 +1039,8 @@ function logout() {
 .editor-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px dashed rgba(217, 172, 88, 0.16);
@@ -995,6 +1169,26 @@ function logout() {
   background: rgba(18, 14, 23, 0.8);
   max-height: 520px;
   overflow-y: auto;
+}
+
+.series-thumb {
+  width: 72px;
+  height: 46px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(217, 172, 88, 0.18);
+  background: rgba(12, 9, 16, 0.6);
+}
+
+.editor-tip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--c-muted);
 }
 
 .preview-title {

@@ -54,7 +54,7 @@ export interface BoardMessage {
 }
 
 export type BoardWall = 'top' | 'left' | 'right'
-export type BoardTexture = 'none' | 'paper' | 'magic' | 'grid' | 'stars'
+export type BoardTexture = 'none' | 'paper' | 'grid' | 'stars'
 
 export interface CheckinState {
   dates: string[]
@@ -76,6 +76,7 @@ export interface ContentOverlay {
   updated: Record<string, Post>
   deleted: string[]
   collectionsCreated: Collection[]
+  collectionsUpdated: Record<string, Collection>
   collectionsDeleted: string[]
 }
 

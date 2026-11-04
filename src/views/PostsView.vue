@@ -285,13 +285,13 @@ onBeforeUnmount(() => {
 .page-head::after {
   content: '';
   position: absolute;
-  right: -30px;
-  top: -30px;
-  width: 220px;
-  height: 220px;
-  background: url('/assets/megumin/magic-circle-small.png') center/contain no-repeat;
-  opacity: 0.13;
-  transform: rotate(14deg);
+  right: -10px;
+  bottom: -26px;
+  width: 340px;
+  height: 150px;
+  background: var(--tex-stardust) right bottom / contain no-repeat;
+  opacity: 0.18;
+  pointer-events: none;
 }
 
 .head-inner {

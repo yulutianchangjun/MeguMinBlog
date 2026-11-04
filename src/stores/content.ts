@@ -11,11 +11,19 @@ const EMPTY: ContentOverlay = {
   updated: {},
   deleted: [],
   collectionsCreated: [],
+  collectionsUpdated: {},
   collectionsDeleted: [],
 }
 
 export const useContentStore = defineStore('content', () => {
-  const overlay = ref<ContentOverlay>(readJSON<ContentOverlay>('content', clone(EMPTY)))
+  const stored = readJSON<ContentOverlay>('content', clone(EMPTY))
+  const overlay = ref<ContentOverlay>({
+    ...clone(EMPTY),
+    ...stored,
+    updated: stored.updated ?? {},
+    collectionsUpdated: stored.collectionsUpdated ?? {},
+    collectionsDeleted: stored.collectionsDeleted ?? [],
+  })
 
   function persist() {
     writeJSON('content', overlay.value)
@@ -39,9 +47,10 @@ export const useContentStore = defineStore('content', () => {
 
   const collections = computed<Collection[]>(() => {
     const deleted = new Set(overlay.value.collectionsDeleted)
-    return [...seedCollections, ...overlay.value.collectionsCreated]
+    const merged = [...seedCollections, ...overlay.value.collectionsCreated]
       .filter((c) => !deleted.has(c.id))
-      .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+      .map((c) => overlay.value.collectionsUpdated[c.id] ?? c)
+    return merged.sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
   })
 
   const categories = computed(() => {
@@ -93,6 +102,37 @@ export const useContentStore = defineStore('content', () => {
     savePost({ ...post, [flag]: !post[flag] })
   }
 
+  function isSeedCollection(id: string): boolean {
+    return seedCollections.some((c) => c.id === id)
+  }
+
+  function saveCollection(collection: Collection): void {
+    const next = clone(overlay.value)
+    next.collectionsDeleted = next.collectionsDeleted.filter((id) => id !== collection.id)
+    if (isSeedCollection(collection.id)) {
+      next.collectionsUpdated[collection.id] = collection
+    } else {
+      const index = next.collectionsCreated.findIndex((c) => c.id === collection.id)
+      if (index >= 0) next.collectionsCreated[index] = collection
+      else next.collectionsCreated.push(collection)
+    }
+    overlay.value = next
+    persist()
+  }
+
+  function deleteCollection(id: string): void {
+    const next = clone(overlay.value)
+    next.collectionsCreated = next.collectionsCreated.filter((c) => c.id !== id)
+    next.collectionsUpdated = Object.fromEntries(
+      Object.entries(next.collectionsUpdated).filter(([key]) => key !== id),
+    ) as Record<string, Collection>
+    if (isSeedCollection(id) && !next.collectionsDeleted.includes(id)) {
+      next.collectionsDeleted.push(id)
+    }
+    overlay.value = next
+    persist()
+  }
+
   function importPosts(posts: Post[]): number {
     const next = clone(overlay.value)
     let count = 0
@@ -132,6 +172,8 @@ export const useContentStore = defineStore('content', () => {
     savePost,
     deletePost,
     toggleFlag,
+    saveCollection,
+    deleteCollection,
     importPosts,
     resetAll,
     exportManifest,

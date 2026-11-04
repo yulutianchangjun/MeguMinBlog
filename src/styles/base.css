@@ -169,6 +169,61 @@ main.content {
   padding: 22px;
 }
 
+/* ---------- 纹理叠加（本地素材，低透明度保留暗色基调） ---------- */
+
+.paper-veil::after,
+.grid-veil::after,
+.dust-veil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  mix-blend-mode: soft-light;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.paper-veil::after {
+  background-image: var(--tex-parchment);
+  opacity: 0.09;
+}
+
+.grid-veil::after {
+  background-image: var(--tex-grid);
+  opacity: 0.08;
+}
+
+.dust-veil::after {
+  background-image: var(--tex-stardust);
+  background-size: 120% auto;
+  background-position: left bottom;
+  opacity: 0.1;
+  mix-blend-mode: screen;
+}
+
+/* ---------- 图标对齐基准 ---------- */
+
+.icon-btn,
+.round-btn,
+.mini,
+.nav-btn,
+.social,
+.ctrl,
+.floater,
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.magic-icon {
+  flex: none;
+  vertical-align: middle;
+}
+
 /* 金色细线分隔 + 菱形节点 */
 .rune-divider {
   position: relative;
