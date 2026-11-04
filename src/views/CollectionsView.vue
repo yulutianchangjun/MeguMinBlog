@@ -53,6 +53,7 @@ onMounted(() => {
   <div class="collections">
     <header class="head mage-card tint-primary">
       <RuneSeal class="head-seal" :size="360" :opacity="0.16" :duration="110" reverse />
+      <img class="head-seal" src="/assets/megumin/head-seal.jpeg"/>
       <div class="head-inner">
         <span class="eyebrow"><i class="tag-dot"></i>Series · 综集</span>
         <h1>把散落的手记<br /><span class="gold-text">装订成册</span></h1>

@@ -1,9 +1,10 @@
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import VueDevTools from 'vite-plugin-vue-devtools'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(),VueDevTools()],
   base: './',
   resolve: {
     alias: {
@@ -15,4 +16,7 @@ export default defineConfig({
     assetsInlineLimit: 4096,
     chunkSizeWarningLimit: 1200,
   },
+  server: {
+    sourcemap: true
+  }
 })

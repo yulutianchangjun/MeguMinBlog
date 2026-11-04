@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import RuneSeal from '@/components/common/RuneSeal.vue'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
@@ -59,7 +58,6 @@ function submitPass() {
 <template>
   <n-modal v-model:show="show" :mask-closable="true" transform-origin="center">
     <div class="login-card mage-card">
-      <RuneSeal class="seal" :size="260" :opacity="0.2" :duration="60" />
       <button class="close" aria-label="关闭" @click="ui.closeLogin()">
         <MagicIcon name="close" :size="14" />
       </button>
@@ -146,13 +144,7 @@ function submitPass() {
   box-shadow: 0 40px 80px -40px #000, 0 0 0 1px rgba(217, 172, 88, 0.08);
 }
 
-.seal {
-  position: absolute;
-  right: -90px;
-  top: -80px;
-  mix-blend-mode: screen;
-  pointer-events: none;
-}
+
 
 .close {
   position: absolute;

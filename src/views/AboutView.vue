@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import RuneSeal from '@/components/common/RuneSeal.vue'
 import { site } from '@/data/site'
 import { siteStartDate } from '@/data/posts'
 import { formatDate } from '@/lib/format'
@@ -42,7 +41,6 @@ const stack = [
 <template>
   <div class="about">
     <header class="hero mage-card">
-      <RuneSeal class="seal" :size="420" :opacity="0.18" :duration="100" />
       <div class="portrait">
         <img src="/assets/megumin/megumin-cast.png" alt="惠惠" />
         <span class="frame"></span>
@@ -162,12 +160,7 @@ const stack = [
   overflow: hidden;
 }
 
-.seal {
-  position: absolute;
-  right: -120px;
-  bottom: -140px;
-  mix-blend-mode: screen;
-}
+
 
 .portrait {
   position: relative;

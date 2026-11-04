@@ -52,7 +52,7 @@ onBeforeUnmount(() => window.clearTimeout(clickTimer))
     </div>
 
     <div class="body">
-      <button class="avatar" title="连续点击头像 5 次…" @click="handleAvatarClick">
+      <button class="avatar" @click="handleAvatarClick">
         <img :src="site.author.avatar" :alt="site.author.name" />
         <span class="avatar-ring"></span>
         <span v-if="auth.isAdmin" class="crown"><MagicIcon name="shield" :size="12" /></span>

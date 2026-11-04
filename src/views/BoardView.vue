@@ -35,7 +35,7 @@ const fontPalette = ['#3A2027', '#4A3218', '#22303C', '#2C4234', '#8E2634', '#F4
 const textures: { key: BoardTexture; label: string }[] = [
   { key: 'none', label: '素纸' },
   { key: 'paper', label: '羊皮纸' },
-  { key: 'magic', label: '魔法阵' },
+  { key: 'magic', label: '魔法帽' },
   { key: 'grid', label: '方格' },
   { key: 'stars', label: '星屑' },
 ]

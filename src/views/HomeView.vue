@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import RuneSeal from '@/components/common/RuneSeal.vue'
 import SparkField from '@/components/common/SparkField.vue'
 import TypewriterText from '@/components/common/TypewriterText.vue'
 import PostCard from '@/components/post/PostCard.vue'
@@ -66,9 +65,9 @@ function goBoard() {
   <div class="home">
     <section class="hero mage-card">
       <SparkField :count="22" />
-      <img class="hero-art" src="/assets/megumin/megumin-cast.png" alt="" />
+      <!-- TODO: 将这里的图片设置为覆盖整个框 -->
+      <img class="hero-art" src="/assets/megumin/castle-banner.png" alt="" />
       <div class="hero-veil"></div>
-      <RuneSeal class="hero-seal" :size="440" :opacity="0.24" :duration="90" />
       <span class="corner tl"></span>
       <span class="corner tr"></span>
       <span class="corner bl"></span>
@@ -286,10 +285,10 @@ function goBoard() {
 
 .hero-art {
   position: absolute;
-  right: -4%;
+  /* right: 0%;
   bottom: -12%;
-  width: 58%;
-  max-width: 640px;
+  width: 100%;
+  max-width: 640px; */
   object-fit: contain;
   mix-blend-mode: multiply;
   filter: contrast(1.06) saturate(1.12) brightness(1.08);
@@ -308,13 +307,6 @@ function goBoard() {
     linear-gradient(180deg, transparent 60%, rgba(14, 11, 18, 0.9) 100%);
 }
 
-.hero-seal {
-  position: absolute;
-  right: -120px;
-  top: -70px;
-  z-index: 1;
-  mix-blend-mode: screen;
-}
 
 .hero-content {
   position: relative;
