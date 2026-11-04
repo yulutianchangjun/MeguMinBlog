@@ -1,0 +1,226 @@
+[
+ {
+  "name": "01-block-404主视觉",
+  "file": "01-block-404主视觉.png",
+  "abs": [
+   0,
+   14,
+   566,
+   434
+  ],
+  "size": [
+   566,
+   434
+  ],
+  "alpha": false,
+  "note": "404 场景"
+ },
+ {
+  "name": "02-panel-功能素材",
+  "file": "02-panel-功能素材.png",
+  "abs": [
+   20,
+   459,
+   470,
+   287
+  ],
+  "size": [
+   470,
+   287
+  ],
+  "alpha": false,
+  "note": "Components 按钮 / 开关 / Loading"
+ },
+ {
+  "name": "03-card-竖版角色卡",
+  "file": "03-card-竖版角色卡.png",
+  "abs": [
+   488,
+   448,
+   246,
+   311
+  ],
+  "size": [
+   246,
+   311
+  ],
+  "alpha": false,
+  "note": "角色立绘卡"
+ },
+ {
+  "name": "04-card-召唤魔法师",
+  "file": "04-card-召唤魔法师.png",
+  "abs": [
+   766,
+   436,
+   184,
+   282
+  ],
+  "size": [
+   184,
+   282
+  ],
+  "alpha": false,
+  "note": "五星卡"
+ },
+ {
+  "name": "05-panel-装饰元素",
+  "file": "05-panel-装饰元素.png",
+  "abs": [
+   19,
+   772,
+   461,
+   233
+  ],
+  "size": [
+   461,
+   233
+  ],
+  "alpha": false,
+  "note": "Decorations"
+ },
+ {
+  "name": "06-elem-进度条组",
+  "file": "06-elem-进度条组.png",
+  "abs": [
+   474,
+   786,
+   262,
+   150
+  ],
+  "size": [
+   262,
+   150
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "07-elem-状态图标组",
+  "file": "07-elem-状态图标组.png",
+  "abs": [
+   479,
+   932,
+   257,
+   72
+  ],
+  "size": [
+   257,
+   72
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "08-grid-表情包",
+  "file": "08-grid-表情包.png",
+  "abs": [
+   546,
+   52,
+   422,
+   356
+  ],
+  "size": [
+   422,
+   356
+  ],
+  "alpha": false,
+  "note": "3x2 表情"
+ },
+ {
+  "name": "09-block-动作素材",
+  "file": "09-block-动作素材.png",
+  "abs": [
+   998,
+   55,
+   520,
+   345
+  ],
+  "size": [
+   520,
+   345
+  ],
+  "alpha": false,
+  "note": "Actions"
+ },
+ {
+  "name": "10-block-状态插画",
+  "file": "10-block-状态插画.png",
+  "abs": [
+   1000,
+   498,
+   290,
+   392
+  ],
+  "size": [
+   290,
+   392
+  ],
+  "alpha": false,
+  "note": "States"
+ },
+ {
+  "name": "11-art-魔法阵",
+  "file": "11-art-魔法阵.png",
+  "abs": [
+   1286,
+   460,
+   240,
+   196
+  ],
+  "size": [
+   240,
+   196
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "12-art-火焰特效",
+  "file": "12-art-火焰特效.png",
+  "abs": [
+   1284,
+   650,
+   186,
+   250
+  ],
+  "size": [
+   186,
+   250
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "13-art-背影立绘",
+  "file": "13-art-背影立绘.png",
+  "abs": [
+   1166,
+   740,
+   359,
+   265
+  ],
+  "size": [
+   359,
+   265
+  ],
+  "alpha": false,
+  "note": "站立背影"
+ },
+ {
+  "name": "14-bubble-爆裂魔法",
+  "file": "14-bubble-爆裂魔法.png",
+  "abs": [
+   790,
+   894,
+   330,
+   80
+  ],
+  "size": [
+   330,
+   80
+  ],
+  "alpha": true,
+  "note": ""
+ }
+]

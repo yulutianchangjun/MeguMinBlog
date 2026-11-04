@@ -1,0 +1,562 @@
+[
+ {
+  "name": "01-panel-主角卡片",
+  "file": "01-panel-主角卡片.png",
+  "abs": [
+   0,
+   23,
+   335,
+   389
+  ],
+  "size": [
+   335,
+   389
+  ],
+  "alpha": false,
+  "note": "Megumin 主视觉卡 + 查看详情按钮"
+ },
+ {
+  "name": "02-panel-今日心情",
+  "file": "02-panel-今日心情.png",
+  "abs": [
+   343,
+   26,
+   232,
+   386
+  ],
+  "size": [
+   232,
+   386
+  ],
+  "alpha": false,
+  "note": "空状态卡：好困…再睡一会吧"
+ },
+ {
+  "name": "03-panel-404找不到页面",
+  "file": "03-panel-404找不到页面.png",
+  "abs": [
+   591,
+   23,
+   223,
+   396
+  ],
+  "size": [
+   223,
+   396
+  ],
+  "alpha": false,
+  "note": "404 状态卡 + 返回首页"
+ },
+ {
+  "name": "04-panel-操作成功",
+  "file": "04-panel-操作成功.png",
+  "abs": [
+   824,
+   23,
+   208,
+   390
+  ],
+  "size": [
+   208,
+   390
+  ],
+  "alpha": false,
+  "note": "成功反馈卡"
+ },
+ {
+  "name": "05-panel-操作失败",
+  "file": "05-panel-操作失败.png",
+  "abs": [
+   1043,
+   23,
+   204,
+   396
+  ],
+  "size": [
+   204,
+   396
+  ],
+  "alpha": false,
+  "note": "失败反馈卡 + 重试"
+ },
+ {
+  "name": "06-panel-导航图标区",
+  "file": "06-panel-导航图标区.png",
+  "abs": [
+   1260,
+   23,
+   265,
+   396
+  ],
+  "size": [
+   265,
+   396
+  ],
+  "alpha": false,
+  "note": "图标 / 头像 / 黑猫 / 装饰"
+ },
+ {
+  "name": "07-panel-登录表单",
+  "file": "07-panel-登录表单.png",
+  "abs": [
+   8,
+   432,
+   327,
+   324
+  ],
+  "size": [
+   327,
+   324
+  ],
+  "alpha": false,
+  "note": "表单装饰卡（登录）"
+ },
+ {
+  "name": "08-panel-功能卡片区",
+  "file": "08-panel-功能卡片区.png",
+  "abs": [
+   729,
+   432,
+   520,
+   325
+  ],
+  "size": [
+   520,
+   325
+  ],
+  "alpha": false,
+  "note": "三张功能卡"
+ },
+ {
+  "name": "09-panel-标签徽章区",
+  "file": "09-panel-标签徽章区.png",
+  "abs": [
+   1247,
+   433,
+   278,
+   174
+  ],
+  "size": [
+   278,
+   174
+  ],
+  "alpha": false,
+  "note": "标签与徽章"
+ },
+ {
+  "name": "10-panel-侧边导航",
+  "file": "10-panel-侧边导航.png",
+  "abs": [
+   12,
+   771,
+   288,
+   236
+  ],
+  "size": [
+   288,
+   236
+  ],
+  "alpha": false,
+  "note": "导航栏菜单"
+ },
+ {
+  "name": "11-panel-横幅banner",
+  "file": "11-panel-横幅banner.png",
+  "abs": [
+   308,
+   780,
+   268,
+   224
+  ],
+  "size": [
+   268,
+   224
+  ],
+  "alpha": false,
+  "note": "城堡夜景 banner"
+ },
+ {
+  "name": "12-panel-进度与提示",
+  "file": "12-panel-进度与提示.png",
+  "abs": [
+   591,
+   777,
+   332,
+   230
+  ],
+  "size": [
+   332,
+   230
+  ],
+  "alpha": false,
+  "note": "进度条 + 提示条"
+ },
+ {
+  "name": "13-panel-装饰元素区",
+  "file": "13-panel-装饰元素区.png",
+  "abs": [
+   934,
+   777,
+   589,
+   228
+  ],
+  "size": [
+   589,
+   228
+  ],
+  "alpha": false,
+  "note": "魔法阵 / 火焰 / 星星 / 法杖"
+ },
+ {
+  "name": "14-elem-输入框-用户名",
+  "file": "14-elem-输入框-用户名.png",
+  "abs": [
+   40,
+   552,
+   264,
+   52
+  ],
+  "size": [
+   264,
+   52
+  ],
+  "alpha": false,
+  "note": ""
+ },
+ {
+  "name": "15-elem-输入框-密码",
+  "file": "15-elem-输入框-密码.png",
+  "abs": [
+   40,
+   613,
+   264,
+   42
+  ],
+  "size": [
+   264,
+   42
+  ],
+  "alpha": false,
+  "note": ""
+ },
+ {
+  "name": "16-elem-记住我与忘记密码",
+  "file": "16-elem-记住我与忘记密码.png",
+  "abs": [
+   41,
+   664,
+   262,
+   34
+  ],
+  "size": [
+   262,
+   34
+  ],
+  "alpha": false,
+  "note": ""
+ },
+ {
+  "name": "17-btn-登录",
+  "file": "17-btn-登录.png",
+  "abs": [
+   38,
+   692,
+   270,
+   52
+  ],
+  "size": [
+   270,
+   52
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "18-elem-搜索框",
+  "file": "18-elem-搜索框.png",
+  "abs": [
+   354,
+   438,
+   214,
+   56
+  ],
+  "size": [
+   214,
+   56
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "19-elem-开关-开启",
+  "file": "19-elem-开关-开启.png",
+  "abs": [
+   362,
+   514,
+   72,
+   37
+  ],
+  "size": [
+   72,
+   37
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "20-elem-开关-关闭",
+  "file": "20-elem-开关-关闭.png",
+  "abs": [
+   362,
+   564,
+   64,
+   35
+  ],
+  "size": [
+   64,
+   35
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "21-elem-复选框组",
+  "file": "21-elem-复选框组.png",
+  "abs": [
+   356,
+   613,
+   120,
+   53
+  ],
+  "size": [
+   120,
+   53
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "22-elem-单选框组",
+  "file": "22-elem-单选框组.png",
+  "abs": [
+   348,
+   681,
+   190,
+   39
+  ],
+  "size": [
+   190,
+   39
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "23-elem-下拉选择器",
+  "file": "23-elem-下拉选择器.png",
+  "abs": [
+   348,
+   714,
+   224,
+   44
+  ],
+  "size": [
+   224,
+   44
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "24-card-爆裂魔法",
+  "file": "24-card-爆裂魔法.png",
+  "abs": [
+   732,
+   467,
+   166,
+   273
+  ],
+  "size": [
+   166,
+   273
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "25-card-魔法之旅",
+  "file": "25-card-魔法之旅.png",
+  "abs": [
+   902,
+   468,
+   168,
+   272
+  ],
+  "size": [
+   168,
+   272
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "26-card-豆之助",
+  "file": "26-card-豆之助.png",
+  "abs": [
+   1072,
+   468,
+   168,
+   272
+  ],
+  "size": [
+   168,
+   272
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "27-tag-爆裂魔法",
+  "file": "27-tag-爆裂魔法.png",
+  "abs": [
+   1267,
+   476,
+   119,
+   46
+  ],
+  "size": [
+   119,
+   46
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "28-tag-魔法师",
+  "file": "28-tag-魔法师.png",
+  "abs": [
+   1390,
+   476,
+   122,
+   46
+  ],
+  "size": [
+   122,
+   46
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "29-tag-冒险中",
+  "file": "29-tag-冒险中.png",
+  "abs": [
+   1267,
+   530,
+   119,
+   44
+  ],
+  "size": [
+   119,
+   44
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "30-tag-可爱",
+  "file": "30-tag-可爱.png",
+  "abs": [
+   1390,
+   530,
+   120,
+   44
+  ],
+  "size": [
+   120,
+   44
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "31-icon-导航图标组",
+  "file": "31-icon-导航图标组.png",
+  "abs": [
+   1268,
+   60,
+   236,
+   100
+  ],
+  "size": [
+   236,
+   100
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "32-icon-头像组",
+  "file": "32-icon-头像组.png",
+  "abs": [
+   1258,
+   178,
+   258,
+   88
+  ],
+  "size": [
+   258,
+   88
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "33-icon-黑猫组",
+  "file": "33-icon-黑猫组.png",
+  "abs": [
+   1266,
+   274,
+   250,
+   82
+  ],
+  "size": [
+   250,
+   82
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "34-icon-装饰图标组",
+  "file": "34-icon-装饰图标组.png",
+  "abs": [
+   1258,
+   356,
+   258,
+   58
+  ],
+  "size": [
+   258,
+   58
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "35-art-惠惠Q版插画",
+  "file": "35-art-惠惠Q版插画.png",
+  "abs": [
+   585,
+   540,
+   145,
+   218
+  ],
+  "size": [
+   145,
+   218
+  ],
+  "alpha": true,
+  "note": ""
+ }
+]

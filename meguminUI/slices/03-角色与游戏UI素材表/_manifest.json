@@ -1,0 +1,354 @@
+[
+ {
+  "name": "01-art-全身立绘",
+  "file": "01-art-全身立绘.png",
+  "abs": [
+   5,
+   14,
+   315,
+   731
+  ],
+  "size": [
+   315,
+   731
+  ],
+  "alpha": false,
+  "note": "法杖全身立绘"
+ },
+ {
+  "name": "02-art-面部特写",
+  "file": "02-art-面部特写.png",
+  "abs": [
+   432,
+   0,
+   220,
+   414
+  ],
+  "size": [
+   220,
+   414
+  ],
+  "alpha": false,
+  "note": "大头特写"
+ },
+ {
+  "name": "03-grid-头像表情6件",
+  "file": "03-grid-头像表情6件.png",
+  "abs": [
+   656,
+   2,
+   312,
+   404
+  ],
+  "size": [
+   312,
+   404
+  ],
+  "alpha": false,
+  "note": "3x2 头像"
+ },
+ {
+  "name": "04-block-Q版第一行",
+  "file": "04-block-Q版第一行.png",
+  "abs": [
+   1048,
+   13,
+   465,
+   195
+  ],
+  "size": [
+   465,
+   195
+  ],
+  "alpha": false,
+  "note": "Chibi 第一行"
+ },
+ {
+  "name": "05-block-Q版第二行",
+  "file": "05-block-Q版第二行.png",
+  "abs": [
+   1053,
+   205,
+   472,
+   200
+  ],
+  "size": [
+   472,
+   200
+  ],
+  "alpha": false,
+  "note": "Chibi 第二行"
+ },
+ {
+  "name": "06-block-三视图小人",
+  "file": "06-block-三视图小人.png",
+  "abs": [
+   322,
+   442,
+   246,
+   290
+  ],
+  "size": [
+   246,
+   290
+  ],
+  "alpha": false,
+  "note": "正 / 侧 / 背"
+ },
+ {
+  "name": "07-art-施法立绘",
+  "file": "07-art-施法立绘.png",
+  "abs": [
+   592,
+   392,
+   482,
+   394
+  ],
+  "size": [
+   482,
+   394
+  ],
+  "alpha": false,
+  "note": "火焰施法"
+ },
+ {
+  "name": "08-card-睡觉插画",
+  "file": "08-card-睡觉插画.png",
+  "abs": [
+   12,
+   772,
+   236,
+   216
+  ],
+  "size": [
+   236,
+   216
+  ],
+  "alpha": false,
+  "note": "状态卡"
+ },
+ {
+  "name": "09-card-Loading",
+  "file": "09-card-Loading.png",
+  "abs": [
+   256,
+   784,
+   170,
+   204
+  ],
+  "size": [
+   170,
+   204
+  ],
+  "alpha": false,
+  "note": "加载卡"
+ },
+ {
+  "name": "10-card-欢呼插画",
+  "file": "10-card-欢呼插画.png",
+  "abs": [
+   430,
+   772,
+   208,
+   217
+  ],
+  "size": [
+   208,
+   217
+  ],
+  "alpha": false,
+  "note": "状态卡"
+ },
+ {
+  "name": "11-card-疑惑插画",
+  "file": "11-card-疑惑插画.png",
+  "abs": [
+   646,
+   772,
+   190,
+   229
+  ],
+  "size": [
+   190,
+   229
+  ],
+  "alpha": false,
+  "note": "状态卡"
+ },
+ {
+  "name": "12-icon-圆形头像-1",
+  "file": "12-icon-圆形头像-1.png",
+  "abs": [
+   1050,
+   465,
+   123,
+   123
+  ],
+  "size": [
+   123,
+   123
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "13-icon-圆形头像-2",
+  "file": "13-icon-圆形头像-2.png",
+  "abs": [
+   1045,
+   611,
+   124,
+   104
+  ],
+  "size": [
+   124,
+   104
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "14-elem-带框横幅",
+  "file": "14-elem-带框横幅.png",
+  "abs": [
+   1188,
+   461,
+   332,
+   177
+  ],
+  "size": [
+   332,
+   177
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "15-btn-开始冒险-长条",
+  "file": "15-btn-开始冒险-长条.png",
+  "abs": [
+   1189,
+   650,
+   325,
+   66
+  ],
+  "size": [
+   325,
+   66
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "16-btn-确认",
+  "file": "16-btn-确认.png",
+  "abs": [
+   1059,
+   733,
+   194,
+   66
+  ],
+  "size": [
+   194,
+   66
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "17-btn-开关-开启",
+  "file": "17-btn-开关-开启.png",
+  "abs": [
+   1275,
+   733,
+   211,
+   66
+  ],
+  "size": [
+   211,
+   66
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "18-bubble-爆裂魔法",
+  "file": "18-bubble-爆裂魔法.png",
+  "abs": [
+   1273,
+   811,
+   246,
+   66
+  ],
+  "size": [
+   246,
+   66
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "19-card-羊皮纸卡",
+  "file": "19-card-羊皮纸卡.png",
+  "abs": [
+   1052,
+   813,
+   205,
+   120
+  ],
+  "size": [
+   205,
+   120
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "20-icon-魔法素材组",
+  "file": "20-icon-魔法素材组.png",
+  "abs": [
+   1276,
+   900,
+   123,
+   47
+  ],
+  "size": [
+   123,
+   47
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "21-icon-法杖帽子宝箱",
+  "file": "21-icon-法杖帽子宝箱.png",
+  "abs": [
+   1408,
+   893,
+   118,
+   103
+  ],
+  "size": [
+   118,
+   103
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "22-elem-进度条",
+  "file": "22-elem-进度条.png",
+  "abs": [
+   1066,
+   946,
+   292,
+   53
+  ],
+  "size": [
+   292,
+   53
+  ],
+  "alpha": true,
+  "note": ""
+ }
+]

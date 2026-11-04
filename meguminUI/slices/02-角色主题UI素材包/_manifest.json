@@ -1,0 +1,322 @@
+[
+ {
+  "name": "01-block-404页面主视觉",
+  "file": "01-block-404页面主视觉.png",
+  "abs": [
+   4,
+   14,
+   476,
+   486
+  ],
+  "size": [
+   476,
+   486
+  ],
+  "alpha": false,
+  "note": "404 场景插画 + 返回首页"
+ },
+ {
+  "name": "02-block-角色半身立绘",
+  "file": "02-block-角色半身立绘.png",
+  "abs": [
+   484,
+   6,
+   176,
+   248
+  ],
+  "size": [
+   176,
+   248
+  ],
+  "alpha": false,
+  "note": "Character 半身"
+ },
+ {
+  "name": "03-grid-头像表情6件",
+  "file": "03-grid-头像表情6件.png",
+  "abs": [
+   658,
+   55,
+   288,
+   196
+  ],
+  "size": [
+   288,
+   196
+  ],
+  "alpha": false,
+  "note": "3x2 表情头像"
+ },
+ {
+  "name": "04-block-动作素材",
+  "file": "04-block-动作素材.png",
+  "abs": [
+   484,
+   292,
+   458,
+   158
+  ],
+  "size": [
+   458,
+   158
+  ],
+  "alpha": false,
+  "note": "Actions 动作小人"
+ },
+ {
+  "name": "05-block-按钮组件",
+  "file": "05-block-按钮组件.png",
+  "abs": [
+   16,
+   500,
+   436,
+   255
+  ],
+  "size": [
+   436,
+   255
+  ],
+  "alpha": false,
+  "note": "Buttons 按钮族"
+ },
+ {
+  "name": "06-card-角色大卡",
+  "file": "06-card-角色大卡.png",
+  "abs": [
+   458,
+   492,
+   228,
+   296
+  ],
+  "size": [
+   228,
+   296
+  ],
+  "alpha": false,
+  "note": "Cards 竖版角色卡"
+ },
+ {
+  "name": "07-block-动态素材",
+  "file": "07-block-动态素材.png",
+  "abs": [
+   17,
+   798,
+   455,
+   198
+  ],
+  "size": [
+   455,
+   198
+  ],
+  "alpha": false,
+  "note": "Animated GIF 帧"
+ },
+ {
+  "name": "08-block-Q版素材",
+  "file": "08-block-Q版素材.png",
+  "abs": [
+   950,
+   16,
+   572,
+   202
+  ],
+  "size": [
+   572,
+   202
+  ],
+  "alpha": false,
+  "note": "Chibi 两行"
+ },
+ {
+  "name": "09-block-辅助贴纸",
+  "file": "09-block-辅助贴纸.png",
+  "abs": [
+   948,
+   240,
+   580,
+   150
+  ],
+  "size": [
+   580,
+   150
+  ],
+  "alpha": false,
+  "note": "Sticker"
+ },
+ {
+  "name": "10-block-状态插画",
+  "file": "10-block-状态插画.png",
+  "abs": [
+   636,
+   486,
+   650,
+   220
+  ],
+  "size": [
+   650,
+   220
+  ],
+  "alpha": false,
+  "note": "States"
+ },
+ {
+  "name": "11-block-特效元素",
+  "file": "11-block-特效元素.png",
+  "abs": [
+   1300,
+   486,
+   225,
+   310
+  ],
+  "size": [
+   225,
+   310
+  ],
+  "alpha": false,
+  "note": "Effects 魔法阵 / 爆炸 / 法杖"
+ },
+ {
+  "name": "12-block-弹窗与提示",
+  "file": "12-block-弹窗与提示.png",
+  "abs": [
+   933,
+   784,
+   374,
+   196
+  ],
+  "size": [
+   374,
+   196
+  ],
+  "alpha": false,
+  "note": "Popups & Notice"
+ },
+ {
+  "name": "13-block-导航与装饰",
+  "file": "13-block-导航与装饰.png",
+  "abs": [
+   648,
+   784,
+   302,
+   223
+  ],
+  "size": [
+   302,
+   223
+  ],
+  "alpha": false,
+  "note": "Navigation & Decor"
+ },
+ {
+  "name": "14-elem-弹窗-一起去冒险",
+  "file": "14-elem-弹窗-一起去冒险.png",
+  "abs": [
+   1292,
+   810,
+   226,
+   164
+  ],
+  "size": [
+   226,
+   164
+  ],
+  "alpha": false,
+  "note": "对话弹窗"
+ },
+ {
+  "name": "15-btn-开始冒险",
+  "file": "15-btn-开始冒险.png",
+  "abs": [
+   19,
+   534,
+   244,
+   62
+  ],
+  "size": [
+   244,
+   62
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "16-btn-查看详情",
+  "file": "16-btn-查看详情.png",
+  "abs": [
+   286,
+   536,
+   132,
+   58
+  ],
+  "size": [
+   132,
+   58
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "17-btn-开始冒险-小",
+  "file": "17-btn-开始冒险-小.png",
+  "abs": [
+   20,
+   604,
+   232,
+   60
+  ],
+  "size": [
+   232,
+   60
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "18-btn-圆形图标按钮组",
+  "file": "18-btn-圆形图标按钮组.png",
+  "abs": [
+   18,
+   682,
+   190,
+   60
+  ],
+  "size": [
+   190,
+   60
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "19-btn-魔法阵按钮",
+  "file": "19-btn-魔法阵按钮.png",
+  "abs": [
+   235,
+   666,
+   80,
+   73
+  ],
+  "size": [
+   80,
+   73
+  ],
+  "alpha": true,
+  "note": ""
+ },
+ {
+  "name": "20-btn-横幅按钮",
+  "file": "20-btn-横幅按钮.png",
+  "abs": [
+   330,
+   679,
+   119,
+   58
+  ],
+  "size": [
+   119,
+   58
+  ],
+  "alpha": true,
+  "note": ""
+ }
+]
