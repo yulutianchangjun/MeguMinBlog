@@ -92,7 +92,10 @@ onMounted(() => {
           :class="{ dim: i !== active }"
         >
           <div class="cover">
-            <img v-if="item.cover" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
+            <template v-if="item.cover">
+              <img class="cover-blur" :src="resolveAsset(item.cover)" alt="" aria-hidden="true" loading="lazy" />
+              <img class="cover-main" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
+            </template>
             <div class="cover-veil"></div>
             <span class="index">{{ String(i + 1).padStart(2, '0') }}</span>
             <span class="runes">{{ item.runes }}</span>
@@ -291,35 +294,59 @@ onMounted(() => {
 
 .cover {
   position: relative;
-  height: 172px;
+  height: 196px;
+  padding: 10px 10px 0;
   overflow: hidden;
-  background: radial-gradient(80% 100% at 50% 10%, #93404f, #5a2430 55%, #2c141d 100%);
+  background:
+    radial-gradient(90% 86% at 50% 0%, rgba(120, 48, 58, 0.46), rgba(24, 17, 25, 0.96) 74%),
+    linear-gradient(160deg, #241a24, #171220);
 }
 
-.cover img {
+/* 同图模糊底衬：等比完整展示时填补留白 */
+.cover-blur {
+  position: absolute;
+  inset: -9%;
+  width: 118%;
+  height: 118%;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(9px) brightness(0.5) saturate(1.08);
+  opacity: 0.78;
+}
+
+.cover-main {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 20%;
-  mix-blend-mode: multiply;
-  filter: contrast(1.03) brightness(1.2) saturate(1.08);
-  transition: transform 0.6s var(--ease);
+  object-fit: contain;
+  object-position: center;
+  border-radius: 7px 7px 0 0;
+  border: 1px solid rgba(217, 172, 88, 0.14);
+  border-bottom: 0;
+  background: rgba(11, 8, 14, 0.42);
+  filter: saturate(1.02) brightness(0.98);
+  transition: transform 0.55s var(--ease), filter 0.4s var(--ease);
 }
 
-.card:hover .cover img {
-  transform: scale(1.05);
+.card:hover .cover-main {
+  transform: scale(1.025);
+  filter: saturate(1.08) brightness(1.04);
 }
 
 .cover-veil {
   position: absolute;
   inset: 0;
+  z-index: 2;
+  pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(23, 18, 28, 0.1), rgba(24, 19, 30, 0.92)),
-    linear-gradient(90deg, rgba(165, 42, 54, 0.28), transparent 60%);
+    linear-gradient(180deg, transparent 58%, rgba(20, 15, 26, 0.58) 100%),
+    linear-gradient(90deg, rgba(165, 42, 54, 0.16), transparent 58%);
 }
 
 .index {
   position: absolute;
+  z-index: 3;
   left: 16px;
   top: 12px;
   font-family: var(--font-display);
@@ -331,6 +358,7 @@ onMounted(() => {
 
 .runes {
   position: absolute;
+  z-index: 3;
   right: 14px;
   bottom: 10px;
   font-family: var(--font-display);

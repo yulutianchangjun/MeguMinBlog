@@ -31,4 +31,4 @@ export const seedCollections: Collection[] = [...(collectionsFile.collections ??
   (a, b) => (a.order ?? 99) - (b.order ?? 99),
 )
 
-export const siteStartDate: string = collectionsFile.siteStartDate ?? '2024-04-01'
+export const siteStartDate: string = collectionsFile.siteStartDate ?? '2026-11-05'

@@ -246,7 +246,10 @@ function goBoard() {
           class="series-card mage-card"
         >
           <div class="series-cover">
-            <img v-if="item.cover" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
+            <template v-if="item.cover">
+              <img class="series-blur" :src="resolveAsset(item.cover)" alt="" aria-hidden="true" loading="lazy" />
+              <img class="series-main" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
+            </template>
             <div class="series-veil"></div>
             <span class="series-rune">{{ item.runes }}</span>
           </div>
@@ -801,33 +804,53 @@ function goBoard() {
 
 .series-cover {
   position: relative;
-  height: 118px;
+  height: 132px;
+  padding: 8px 8px 0;
   overflow: hidden;
-  background: radial-gradient(80% 100% at 50% 10%, #93404f, #5a2430 55%, #2c141d 100%);
+  background:
+    radial-gradient(90% 86% at 50% 0%, rgba(120, 48, 58, 0.42), rgba(24, 17, 25, 0.96) 74%),
+    linear-gradient(160deg, #241a24, #171220);
 }
 
-.series-cover img {
+.series-blur {
+  position: absolute;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  object-fit: cover;
+  filter: blur(8px) brightness(0.48) saturate(1.06);
+  opacity: 0.75;
+}
+
+.series-main {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 18%;
-  mix-blend-mode: multiply;
-  filter: contrast(1.03) brightness(1.2) saturate(1.08);
-  transition: transform 0.6s var(--ease);
+  object-fit: contain;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid rgba(217, 172, 88, 0.12);
+  border-bottom: 0;
+  background: rgba(11, 8, 14, 0.4);
+  filter: brightness(0.98) saturate(1.02);
+  transition: transform 0.55s var(--ease);
 }
 
-.series-card:hover .series-cover img {
-  transform: scale(1.06);
+.series-card:hover .series-main {
+  transform: scale(1.03);
 }
 
 .series-veil {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(23, 18, 28, 0.1), rgba(24, 19, 30, 0.95));
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 62%, rgba(22, 17, 27, 0.6) 100%);
 }
 
 .series-rune {
   position: absolute;
+  z-index: 3;
   left: 14px;
   bottom: 10px;
   font-family: var(--font-display);

@@ -2,9 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import AddMusicModal from '@/components/widgets/AddMusicModal.vue'
-import { toast } from '@/lib/toast'
+import PlaylistModal from '@/components/widgets/PlaylistModal.vue'
 import { useAuthStore } from '@/stores/auth'
-import { usePlayerStore, type Track } from '@/stores/player'
+import { usePlayerStore } from '@/stores/player'
 
 const player = usePlayerStore()
 const auth = useAuthStore()
@@ -40,10 +40,6 @@ function next() {
   void player.next()
 }
 
-function select(index: number) {
-  void player.play(index)
-}
-
 function onSeek(event: MouseEvent) {
   if (!canSeek.value) return
   const element = event.currentTarget as HTMLElement
@@ -54,16 +50,6 @@ function onSeek(event: MouseEvent) {
 
 function onVolume(event: Event) {
   player.setVolume(Number((event.target as HTMLInputElement).value))
-}
-
-async function remove(item: Track) {
-  await player.removeTrack(item.id)
-  toast.info(`已移除：${item.title}`)
-}
-
-function kindLabel(item: Track): string {
-  if (item.kind === 'synth') return '合成'
-  return item.kind === 'file' ? '本地' : '外链'
 }
 
 onMounted(() => {
@@ -167,39 +153,7 @@ onMounted(() => {
       </button>
     </div>
 
-    <transition name="list">
-      <div v-if="listOpen" class="playlist">
-        <div class="pl-head">
-          <span>播放列表</span>
-          <em>{{ player.customCount }} 首自定义 / {{ player.playlist.length }} 首</em>
-        </div>
-        <div
-          v-for="(item, i) in player.playlist"
-          :key="item.id"
-          class="pl-item"
-          :class="{ active: i === player.index }"
-          role="button"
-          tabindex="0"
-          @click="select(i)"
-          @keydown.enter="select(i)"
-        >
-          <span class="pl-no">{{ String(i + 1).padStart(2, '0') }}</span>
-          <span class="pl-info">
-            <strong>{{ item.title }}</strong>
-            <em>{{ item.artist }}</em>
-          </span>
-          <span class="pl-kind">{{ kindLabel(item) }}</span>
-          <button
-            v-if="auth.isAdmin && item.kind !== 'synth'"
-            class="pl-del"
-            title="移除"
-            @click.stop="remove(item)"
-          >
-            <MagicIcon name="trash" :size="11" />
-          </button>
-        </div>
-      </div>
-    </transition>
+    <PlaylistModal v-model:show="listOpen" />
 
     <p v-if="player.error" class="error">{{ player.error }}</p>
 
@@ -494,118 +448,6 @@ onMounted(() => {
   text-align: center;
 }
 
-.playlist {
-  margin: 12px 12px 0;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(217, 172, 88, 0.16);
-  background: rgba(12, 9, 16, 0.55);
-  max-height: 216px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.pl-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 2px 4px 7px;
-  border-bottom: 1px dashed rgba(217, 172, 88, 0.14);
-  margin-bottom: 4px;
-  font-size: 9.5px;
-  letter-spacing: 0.08em;
-  color: var(--c-gold);
-}
-
-.pl-head em {
-  font-style: normal;
-  font-family: var(--font-mono);
-  font-size: 8px;
-  color: var(--c-muted);
-}
-
-.pl-item {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s var(--ease);
-}
-
-.pl-item:hover,
-.pl-item:focus-visible {
-  background: rgba(217, 172, 88, 0.07);
-  outline: none;
-}
-
-.pl-item.active {
-  background: linear-gradient(90deg, rgba(165, 42, 54, 0.32), transparent);
-}
-
-.pl-no {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  color: var(--c-gold-dim);
-  width: 14px;
-  flex: none;
-}
-
-.pl-info {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.35;
-}
-
-.pl-info strong {
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--c-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pl-info em {
-  font-style: normal;
-  font-size: 8.5px;
-  color: var(--c-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pl-kind {
-  flex: none;
-  font-size: 7.5px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  border: 1px solid rgba(217, 172, 88, 0.2);
-  color: var(--c-muted);
-}
-
-.pl-del {
-  width: 18px;
-  height: 18px;
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 0;
-  background: transparent;
-  color: var(--c-muted);
-  cursor: pointer;
-}
-
-.pl-del:hover {
-  color: #ffb3bd;
-  background: rgba(199, 60, 75, 0.2);
-}
-
 .error {
   margin: 10px 18px 0;
   padding: 5px 8px;
@@ -622,17 +464,6 @@ onMounted(() => {
   font-size: 9px;
   letter-spacing: 0.04em;
   color: rgba(139, 128, 120, 0.7);
-}
-
-.list-enter-active,
-.list-leave-active {
-  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
-}
-
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
 }
 
 @keyframes discSpin {

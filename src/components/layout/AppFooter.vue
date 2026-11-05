@@ -29,9 +29,9 @@ function openAdminHint() {
       </div>
 
       <div class="meta">
-        <span>© {{ year }} {{ site.author.name }} · {{ site.icp }}</span>
-        <span class="dot">·</span>
-        <span>驱动 Vue 3 / Vite / Pinia</span>
+        <span>© {{ year }} {{ site.author.name }} </span>
+        <!-- <span class="dot">·</span>
+        <span>驱动 Vue 3 / Vite / Pinia</span> -->
         <span class="dot">·</span>
         <button class="link" @click="openAdminHint">关于本站</button>
       </div>

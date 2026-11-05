@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { NConfigProvider, NMessageProvider, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
@@ -13,6 +14,10 @@ import { useAuthStore } from '@/stores/auth'
 
 const ui = useUiStore()
 const auth = useAuthStore()
+const route = useRoute()
+
+/** 404 等沉浸页跳过三栏骨架，只保留 Header / Footer */
+const bare = computed(() => route.meta.bare === true)
 
 const overrides: GlobalThemeOverrides = {
   common: {
@@ -82,12 +87,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <div class="app-root">
         <FireRain />
         <AppHeader />
-        <div class="shell">
-          <div class="layout-grid">
-            <aside class="col-side left">
+        <div class="shell" :class="{ bare }">
+          <div class="layout-grid" :class="{ bare }">
+            <aside v-if="!bare" class="col-side left">
               <LeftSidebar />
             </aside>
-            <main class="content">
+            <main class="content" :class="{ bare }">
               <router-view v-slot="{ Component, route }">
                 <transition name="page" mode="out-in">
                   <keep-alive :include="['PostsView']">
@@ -96,7 +101,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 </transition>
               </router-view>
             </main>
-            <aside class="col-side right">
+            <aside v-if="!bare" class="col-side right right-sidebar-scroll">
               <RightSidebar />
             </aside>
           </div>
@@ -119,6 +124,27 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 .shell {
   flex: 1;
+}
+
+/* 全宽单栏骨架（404 等沉浸页） */
+.shell.bare {
+  max-width: none;
+  width: 100%;
+  padding: 0 var(--gutter) 24px;
+  display: flex;
+}
+
+.layout-grid.bare {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding-top: 0;
+  width: 100%;
+}
+
+main.content.bare {
+  min-height: calc(100vh - var(--header-h) - 186px);
+  justify-content: center;
+  gap: 0;
 }
 
 .page-enter-active,

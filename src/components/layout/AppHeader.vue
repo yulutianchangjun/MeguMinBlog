@@ -16,7 +16,7 @@ const scrolled = ref(false)
 
 const nav = [
   { label: '首页', en: 'Home', path: '/', icon: 'home' },
-  { label: '日常流', en: 'Daily', path: '/posts', icon: 'book' },
+  { label: '日常', en: 'Daily', path: '/posts', icon: 'book' },
   { label: '综集', en: 'Series', path: '/collections', icon: 'layers' },
   { label: '留言墙', en: 'Board', path: '/board', icon: 'pin' },
   { label: '关于', en: 'About', path: '/about', icon: 'user' },

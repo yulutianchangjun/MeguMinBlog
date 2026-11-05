@@ -112,8 +112,8 @@ const categories = computed(() => {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(15, 11, 19, 0.35), rgba(17, 12, 21, 0.94)),
-    linear-gradient(100deg, rgba(120, 30, 45, 0.32), transparent 62%);
+    linear-gradient(180deg, rgba(15, 11, 19, 0.08), rgba(17, 12, 21, 0.72)),
+    linear-gradient(100deg, rgba(120, 30, 45, 0.18), transparent 64%);
 }
 
 .hero-rune {

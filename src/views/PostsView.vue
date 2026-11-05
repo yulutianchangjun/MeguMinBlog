@@ -160,7 +160,7 @@ onBeforeUnmount(() => {
     <header class="page-head mage-card tint-primary">
       <div class="head-inner">
         <div>
-          <span class="eyebrow"><i class="tag-dot"></i>Daily Log · 日常流</span>
+          <span class="eyebrow"><i class="tag-dot"></i>Daily Log · 日常</span>
           <h1>荒野与手记</h1>
           <p>
             每一次咏唱之后的记录。按分类筛选，或直接搜一个词——比如「爆裂」。
@@ -237,15 +237,31 @@ onBeforeUnmount(() => {
       <PostCard v-for="post in paged" :key="post.id" :post="post" />
     </div>
 
-    <div v-else class="empty mage-card">
-      <img src="/assets/megumin/megumin-portrait.png" alt="" class="empty-art" />
-      <div>
+    <div v-else class="empty">
+      <div class="empty-art">
+        <img src="/assets/megumin/empty-state.webp" alt="没有找到对应的手记" />
+      </div>
+
+      <div class="empty-info">
+        <span class="eyebrow"><i class="tag-dot"></i>Nothing Found · 空页</span>
         <h3>这一页什么也没有</h3>
-        <p>也许是关键词太生僻了。换一个词，或者清除筛选。</p>
-        <button class="btn-magic" @click="reset">
-          <MagicIcon name="wand" :size="14" />
-          重新检索
-        </button>
+        <p v-if="hasFilter">
+          没有匹配
+          <em v-if="q.trim()">「{{ q.trim() }}」</em>
+          <em v-if="q.trim() && selectedCats.length">与</em>
+          <em v-if="selectedCats.length">{{ selectedCats.join('、') }}</em>
+          的手记。换个词，或者把筛选清掉。
+        </p>
+        <p v-else>这里暂时还没有公开的手记，晚点再来看看。</p>
+
+        <div class="empty-actions">
+          <button class="btn-magic" @click="reset">
+            <MagicIcon name="wand" :size="14" />
+            清除筛选
+          </button>
+        </div>
+
+        <span class="empty-hint">也可以直接翻翻分类，或从最新的一篇开始读。</span>
       </div>
     </div>
 
@@ -495,30 +511,64 @@ h1 {
 .empty {
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 30px;
+  justify-content: center;
+  gap: clamp(22px, 4.6vw, 62px);
+  min-height: clamp(380px, 47vh, 540px);
+  padding: 20px 12px 44px;
 }
 
 .empty-art {
-  width: 120px;
-  height: 150px;
-  object-fit: cover;
-  object-position: center 10%;
-  border-radius: 12px;
-  border: 1px solid rgba(217, 172, 88, 0.2);
-  mix-blend-mode: multiply;
-  background: radial-gradient(80% 100% at 50% 10%, #7d3040, #2b121b 74%);
-  filter: contrast(1.03) brightness(1.2) saturate(1.08);
+  flex: none;
+  width: clamp(232px, 26vw, 320px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-art img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 26px 40px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 26px rgba(165, 42, 54, 0.16));
+}
+
+.empty-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 400px;
 }
 
 .empty h3 {
-  font-size: 19px;
-  margin-bottom: 6px;
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.06em;
 }
 
 .empty p {
-  margin: 0 0 14px;
+  margin: 0;
   font-size: 13px;
+  line-height: 1.9;
+  color: var(--c-text-2);
+}
+
+.empty p em {
+  font-style: normal;
+  color: var(--c-gold-2);
+}
+
+.empty-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+
+.empty-hint {
+  font-size: 11px;
+  letter-spacing: 0.04em;
   color: var(--c-muted);
 }
 
@@ -591,6 +641,18 @@ h1 {
   .empty {
     flex-direction: column;
     text-align: center;
+    gap: 16px;
+    min-height: 0;
+    padding: 30px 10px 44px;
+  }
+  .empty-art {
+    width: min(64vw, 250px);
+  }
+  .empty-info {
+    align-items: center;
+  }
+  .empty-actions {
+    justify-content: center;
   }
 }
 </style>

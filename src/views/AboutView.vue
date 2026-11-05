@@ -133,7 +133,8 @@ const stack = [
           </span>
         </div>
         <div class="notes">
-          <p>
+          <strong>由于非常喜欢MeguMin,便做了对应的主题Blog</strong>
+          <!-- <p>
             <strong>内容</strong>：文章以 Markdown + Frontmatter 存放，构建期打包为静态资源，无后端依赖。
           </p>
           <p>
@@ -145,7 +146,7 @@ const stack = [
           <p class="easter">
             <MagicIcon name="lock" :size="10" />
             暗门：连续点击左侧头像 5 次，或按下 Ctrl + Shift + L。
-          </p>
+          </p> -->
         </div>
       </div>
     </section>

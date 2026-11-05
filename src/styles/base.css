@@ -61,23 +61,64 @@ img {
   color: #fff;
 }
 
+/* ---------- 主题化滚动条：透明轨道 + 暗红滑块，悬浮转暗金 ---------- */
+
+html {
+  /* Firefox 规范 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(165, 42, 54, 0.45) transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(165, 42, 54, 0.38) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #14111a;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  border-radius: 99px;
-  background: linear-gradient(180deg, #4a2a33, #2f2029);
-  border: 2px solid #14111a;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(165, 42, 54, 0.34);
+  transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #7a313c, #3a2530);
+  background: rgba(217, 172, 88, 0.58);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 右侧栏内部滚动容器：更窄的滑轨，几乎不占宽度 */
+.right-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(165, 42, 54, 0.4) transparent;
+}
+
+.right-sidebar-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.right-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.right-sidebar-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(165, 42, 54, 0.35);
+}
+
+.right-sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(217, 172, 88, 0.6);
 }
 
 h1,

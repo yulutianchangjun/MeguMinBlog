@@ -15,146 +15,157 @@ const quote = quotes[Math.floor(Math.random() * quotes.length)]
 </script>
 
 <template>
-  <div class="not-found mage-card">
-    <div class="art">
-      <img src="/assets/megumin/404.webp" alt="404" />
-      <div class="art-veil"></div>
-    </div>
-    <div class="text">
-      <span class="eyebrow"><i class="tag-dot"></i>404 · Page Not Found</span>
-      <h1>这一页不存在</h1>
-      <p class="path">{{ path }}</p>
-      <p class="quote">「{{ quote }}」</p>
-      <div class="actions">
-        <router-link to="/" class="btn-magic">
-          <MagicIcon name="home" :size="14" />
-          回到首页
-        </router-link>
-        <router-link to="/posts" class="btn-magic ghost">
-          <MagicIcon name="book" :size="14" />
-          翻翻手记
-        </router-link>
-      </div>
+  <div class="not-found">
+    <h1 class="sr-only">404 · 这一页不存在</h1>
 
-      <div class="jump">
-        <span>也可以从这里开始</span>
-        <router-link to="/collections">综集</router-link>
-        <router-link to="/board">留言墙</router-link>
-        <router-link to="/about">关于我</router-link>
-      </div>
+    <div class="art">
+      <span class="art-glow" aria-hidden="true"></span>
+      <img src="/assets/megumin/404-cutout.webp" alt="惠惠趴在地上，旁边写着 404 Not Found" />
     </div>
+
+    <div class="actions">
+      <router-link to="/" class="btn-magic">
+        <MagicIcon name="home" :size="15" />
+        返回首页
+      </router-link>
+      <router-link to="/posts" class="btn-magic ghost">
+        <MagicIcon name="book" :size="14" />
+        翻翻手记
+      </router-link>
+    </div>
+
+    <p class="meta">
+      <span class="path">{{ path }}</span>
+      <span class="dot">·</span>
+      <span class="quote">「{{ quote }}」</span>
+    </p>
   </div>
 </template>
 
 <style scoped>
 .not-found {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  align-items: stretch;
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 26px 0 40px;
+  text-align: center;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
-  min-height: 420px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .art {
   position: relative;
-  overflow: hidden;
-  background: radial-gradient(80% 100% at 50% 10%, #7d3040, #2b121b 74%);
+  width: clamp(320px, 44vw, 560px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.art-glow {
+  position: absolute;
+  width: 86%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(217, 172, 88, 0.16) 0%, rgba(165, 42, 54, 0.16) 42%, transparent 70%);
+  filter: blur(18px);
+  pointer-events: none;
 }
 
 .art img {
+  position: relative;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 20%;
-  mix-blend-mode: multiply;
-  filter: contrast(1.03) brightness(1.2) saturate(1.08);
-}
-
-.art-veil {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, transparent 60%, rgba(24, 19, 30, 0.9) 100%),
-    linear-gradient(180deg, rgba(23, 18, 28, 0.1), rgba(24, 19, 30, 0.5));
-}
-
-.text {
-  padding: 44px 36px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-}
-
-h1 {
-  margin: 6px 0 4px;
-  font-size: 30px;
-  letter-spacing: 0.08em;
-}
-
-.path {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--c-gold);
-  word-break: break-all;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: rgba(217, 172, 88, 0.07);
-  border: 1px dashed rgba(217, 172, 88, 0.2);
-  align-self: flex-start;
-}
-
-.quote {
-  margin: 10px 0 20px;
-  font-family: var(--font-display);
-  font-size: 13px;
-  line-height: 1.9;
-  color: var(--c-text-2);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 30px 46px rgba(0, 0, 0, 0.62)) saturate(1.02);
+  animation: artFloat 7s ease-in-out infinite;
 }
 
 .actions {
   display: flex;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-
-.jump {
-  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-top: 22px;
-  padding-top: 14px;
-  border-top: 1px dashed rgba(217, 172, 88, 0.18);
+  margin-top: -6px;
+}
+
+.meta {
+  margin: 16px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 10.5px;
-  color: var(--c-muted);
   letter-spacing: 0.04em;
+  color: var(--c-muted);
 }
 
-.jump a {
+.meta .path {
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px dashed rgba(217, 172, 88, 0.22);
+  background: rgba(217, 172, 88, 0.05);
+  color: var(--c-gold-dim);
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta .dot {
+  color: rgba(217, 172, 88, 0.4);
+}
+
+.meta .quote {
+  font-family: var(--font-display);
   color: var(--c-text-2);
-  padding-bottom: 1px;
-  border-bottom: 1px dashed rgba(217, 172, 88, 0.28);
 }
 
-.jump a:hover {
-  color: var(--c-gold-2);
-  border-bottom-color: var(--c-gold);
+@keyframes artFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
 }
 
 @media (max-width: 760px) {
   .not-found {
-    grid-template-columns: 1fr;
+    padding: 18px 0 34px;
   }
   .art {
-    height: 260px;
+    width: min(86vw, 420px);
   }
-  .art-veil {
-    background: linear-gradient(180deg, transparent 55%, rgba(24, 19, 30, 0.95) 100%);
+  .meta {
+    flex-direction: column;
+    gap: 6px;
   }
-  .text {
-    padding: 22px;
+  .meta .dot {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art img {
+    animation: none;
   }
 }
 </style>

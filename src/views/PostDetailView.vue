@@ -125,7 +125,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div v-if="!post || !accessible" class="missing mage-card">
-    <img src="/assets/megumin/megumin-portrait.png" alt="" />
+    <img src="/assets/megumin/megumin-portrait.webp" alt="" />
     <div>
       <span class="eyebrow">404 · Lost Page</span>
       <h2>这一页被魔力吞掉了</h2>
@@ -265,9 +265,9 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(96deg, rgba(10, 7, 14, 0.92) 0%, rgba(12, 8, 16, 0.66) 52%, rgba(16, 11, 20, 0.34) 100%),
-    linear-gradient(180deg, rgba(15, 11, 19, 0.3) 0%, rgba(16, 12, 21, 0.78) 58%, rgba(18, 13, 24, 0.98) 100%),
-    linear-gradient(100deg, rgba(120, 30, 45, 0.32), transparent 62%);
+    linear-gradient(96deg, rgba(10, 7, 14, 0.84) 0%, rgba(12, 8, 16, 0.5) 54%, rgba(16, 11, 20, 0.2) 100%),
+    linear-gradient(180deg, rgba(15, 11, 19, 0.1) 0%, rgba(16, 12, 21, 0.62) 58%, rgba(18, 13, 24, 0.95) 100%),
+    linear-gradient(100deg, rgba(120, 30, 45, 0.2), transparent 64%);
 }
 
 .hero-content {
