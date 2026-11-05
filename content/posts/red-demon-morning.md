@@ -6,7 +6,7 @@ categories:
   - 红魔族日常
   - 随笔
 collections: red-demon-days
-cover: assets/megumin/megumin-chibi.png
+cover: assets/megumin/megumin-chibi.webp
 excerpt: 在红魔之里，早上七点的街道上有人在试验新魔法，有人在卖奇怪的药水，还有人在爆炸。这很正常。
 ---
 

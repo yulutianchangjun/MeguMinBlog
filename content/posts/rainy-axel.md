@@ -6,7 +6,7 @@ categories:
   - 旅途见闻
   - 随笔
 collections: world-travel
-cover: assets/megumin/megumin-back.png
+cover: assets/megumin/megumin-back.webp
 excerpt: 雨天不能放爆裂魔法。于是我第一次认真地看了一座城。
 ---
 

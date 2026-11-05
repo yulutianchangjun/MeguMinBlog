@@ -6,7 +6,7 @@ categories:
   - 红魔族日常
   - 随笔
 collections: red-demon-days
-cover: assets/megumin/megumin-portrait.png
+cover: assets/megumin/megumin-portrait.webp
 excerpt: 帽子不是装饰品。它是身份、是护身符、是睡觉时唯一不能摘下来的东西。
 ---
 

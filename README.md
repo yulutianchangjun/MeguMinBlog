@@ -32,6 +32,7 @@ Node 版本建议 20+。
 | 综集 | 横向轮播（滚动吸附 + 箭头/圆点）、合集内复用日常卡片、不提供全局检索 |
 | 留言墙 | 上/左/右三面软木板，每面每批 5 张；钉满自动封存并开启新批次，可回看历史批次；访客自定义底色、字色、纸纹与墙面；右下角签名与时间戳；点击卡片弹出全尺寸预览 |
 | 管理面板 | 隐藏唤起（连点头像 5 次或 `Ctrl + Shift + L`）、GitHub PAT / 离线口令鉴权、文章新建/编辑/删除/置顶/隐藏/草稿、**本地图片上传封面**、**编辑器内 `.md` 一键解析填充**、**综集新增/编辑/删除**、Markdown 预览、ZIP（Markdown + JSON）导出、`.md`/`.json`/`.zip` 拖拽导入、UV 仪表盘 |
+| 音乐播放器 | 内置 3 段 Web Audio 合成曲；博主可「添加音乐」——本地 MP3/FLAC/WAV 上传（IndexedDB 持久化）或填写外链/静态路径；Pinia 播放列表支持切歌、进度、音量与刷新后恢复 |
 | 签到 | 累计与连续天数、四枚徽章、仅博主可打卡，状态本地持久化 |
 | 404 | 主题 404 插画 + 返回入口 |
 
@@ -73,6 +74,15 @@ pinned: true
 站点信息（站名、博主资料、社交外链、纪念日、管理员 GitHub 账号）在 `src/data/site.ts`。
 
 ---
+
+## 音乐播放器
+
+- 内置 3 段 Web Audio 合成曲（`src/lib/chime.ts`），不加载任何音频文件。
+- 博主登录后，播放器标题栏出现 **＋**：支持
+  1. **本地文件**：选择/拖拽 `.mp3` / `.flac` / `.wav` / `.m4a`，文件名自动作为曲名，音频写入浏览器 **IndexedDB**（`mgm-audio`），刷新后自动恢复并可直接播放；
+  2. **网络链接**：填写曲名、艺术家、封面图地址、音频直链（`https://…` 或 `assets/audio/…` 静态路径）。
+- 新曲目响应式追加到 Pinia `playlist`，保留当前索引与播放状态；播放列表支持切歌、删除（仅博主）、进度拖动（音频文件）与音量记忆。
+- 访客可以播放、切歌、调音量，但看不到添加入口与删除按钮；本地音频只存在于当前浏览器，不会上传。
 
 ## 管理入口与鉴权
 
@@ -126,6 +136,7 @@ pinned: true
 content/                  # Markdown 文章与综集定义
 public/assets/megumin/    # 从 meguminUI 切片中挑选并重命名的主题素材
 public/assets/textures/   # 羊皮纸 / 方格纸 / 星屑纹理与粒子贴图
+public/assets/audio/      # 可选：放置静态音频，供「网络链接」模式以相对路径引用
 src/
   components/
     admin/                # 登录弹窗、管理面板
@@ -134,12 +145,12 @@ src/
     post/                 # 文章卡片、评论区
     widgets/              # 博主卡、音乐播放器、日历、倒计时、目录
   data/                   # 站点配置、种子内容加载、演示互动数据
-  lib/                    # Frontmatter、Markdown、音频合成、图片压缩、导入导出、工具
+  lib/                    # Frontmatter、Markdown、音频合成/IndexedDB、图片压缩、导入导出、工具
   router/
   stores/                 # auth / content / interaction / profile / reading / ui
   styles/                 # 设计令牌、基础样式、正文排版
   views/                  # 首页、日常流、详情、综集、留言墙、关于、404
-meguminUI/                # 原始素材、切片与优化前大图（未参与构建）
+meguminUI/                # 原始素材、切片与优化前大图（含原尺寸 logo，未参与构建）
 ```
 
 ---
@@ -148,21 +159,22 @@ meguminUI/                # 原始素材、切片与优化前大图（未参与�
 
 主题保持「暗黑暗红复古魔幻」，并按《网页设计优化.md》做了以下改造：
 
-- **移除全部魔法阵**：删除 `RuneSeal` / `BackgroundMagic` / `SparkField` 组件与所有魔法阵背景图、旋转动效；页头、页脚、唱片、卡片占位改为火焰徽记、CSS 唱片与星屑。
+- **移除全部魔法阵**：删除 `RuneSeal` / `BackgroundMagic` / `SparkField` 组件与所有魔法阵背景图、旋转动效；页头、页脚统一使用 `public/assets/megumin/logo.png`（已压缩到 320px / 32KB），唱片与卡片占位改为 CSS 唱片与星屑。
 - **火雨粒子**：`FireRain.vue` 用 Canvas 绘制从右上到左下（约 225°）的余烬与星屑，带渐隐、微重力加速与闪烁；全站一层，首页英雄区再叠一层，`prefers-reduced-motion` 下自动关闭。
 - **本地纹理**：`public/assets/textures/` 由 `网页设计优化.assets` 裁切压缩而来——
   - `parchment-scroll.webp`：关于页摘句、文章结尾「手记终」；
   - `parchment-fill.jpg`：便签纸纹、详情页底衬（低透明度叠加）；
   - `grid-fill.jpg`：软木板底板与「方格纸」便签；
   - `stardust.webp` / `star-*.webp`：英雄区星屑与粒子贴图。
-- **英雄区**：背景图铺满容器（`object-fit: cover` + `center`），模糊值统一降到 3–6px，取消过度雾化。
+- **英雄区**：背景图铺满容器（`object-fit: cover` + `center`），`filter: blur(0.5px) brightness(1.12)`，暗色遮罩降到左侧 0.8 → 右侧 0.08 的方向性渐变，保留原图细节与文字可读性。
 - **手记卡片**：封面改为 `object-fit: contain` 完整展示，同图模糊底衬填补留白；移除阅读时长，元信息只保留评论与点赞。
-- **图标与播放器**：图标容器统一 `inline-flex` 居中；播放/暂停图标随状态实时切换（修复了此前暂停图标不可见的问题），播放时显示律动条并旋转唱片。
+- **图标与播放器**：图标容器统一 `inline-flex` 居中；播放/暂停图标随状态实时切换，播放时显示律动条并旋转唱片。
+- **留言墙抽取动效**：点击卡片时用 FLIP（`getBoundingClientRect` → 居中目标 → `translate3d + rotate + scale` 补间）把卡片从钉板位置“抽出”放大，原位保留 `opacity: 0.16` 虚线幽灵占位；关闭时按同一回弹曲线缩回原位，`transitionend` 后再销毁浮层，原卡片透明度瞬间恢复。
 - 调色板：核心爆裂红 `#A52A36`、深红暗影 `#641C2B`、深渊暗黑 `#17151C`、魔法阵金 `#D9AC58`、卷轴米白 `#F4EBDD`。
-- 音乐播放器没有使用音频文件，而是用 Web Audio 实时合成三段短循环（可在 `src/lib/chime.ts` 调整旋律），因此首屏不加载任何音频资源。
+- 内置曲目用 Web Audio 实时合成三段短循环（`src/lib/chime.ts`），首屏不加载任何音频文件；只有博主添加的本地/外链曲目才在播放时读取音频源。
 - 图标为内联 SVG 组件 `MagicIcon`，无额外图标库依赖。
 
-> 原始大图（castle-banner.png / head-seal.jpeg / magic-circle-small.png）已压缩为 WebP 后接入，原图保存在 `meguminUI/originals/`，不参与构建。
+> 原始大图（castle-banner.png / head-seal.jpeg / magic-circle-small.png / logo.png）已压缩后接入，原图保存在 `meguminUI/originals/`，不参与构建；角色插画与 404 图也统一转为 WebP（PNG 原图保留在 git 历史中），首屏体积从 8.1MB 降到 2.5MB。
 
 ## 素材
 

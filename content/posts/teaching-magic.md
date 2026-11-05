@@ -6,7 +6,7 @@ categories:
   - 旅途见闻
   - 手记
 collections: world-travel
-cover: assets/megumin/megumin-sticker.png
+cover: assets/megumin/megumin-sticker.webp
 excerpt: 我从来没想过自己会当老师。更没想过，第一堂课教的是「什么时候不要放」。
 ---
 

@@ -289,8 +289,8 @@ onBeforeUnmount(() => {
   bottom: -26px;
   width: 340px;
   height: 150px;
-  background: var(--tex-stardust) right bottom / contain no-repeat;
-  opacity: 0.18;
+  background: var(--tex-stardust);
+  opacity: 0.5;
   pointer-events: none;
 }
 

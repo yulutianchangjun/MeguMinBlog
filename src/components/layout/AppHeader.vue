@@ -53,7 +53,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
     <div class="header-inner">
       <router-link to="/" class="brand" aria-label="返回首页">
         <span class="sigil">
-          <MagicIcon name="flame" :size="19" />
+          <img src="/assets/megumin/logo.png" :alt="`${site.title} LOGO`" />
         </span>
         <span class="brand-text">
           <strong>{{ site.title }}</strong>
@@ -166,17 +166,24 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
 
 .sigil {
   position: relative;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  border: 1px solid rgba(217, 172, 88, 0.32);
-  background:
-    radial-gradient(120% 120% at 30% 20%, rgba(199, 60, 75, 0.5), rgba(36, 20, 28, 0.9) 70%);
-  color: var(--c-gold-2);
-  box-shadow: inset 0 0 14px rgba(255, 176, 84, 0.14), 0 6px 16px -12px #000;
+  flex: none;
+}
+
+.sigil img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 12px rgba(217, 172, 88, 0.18));
+  transition: transform 0.3s var(--ease);
+}
+
+.brand:hover .sigil img {
+  transform: translateY(-1px) scale(1.03);
 }
 
 .brand-text {

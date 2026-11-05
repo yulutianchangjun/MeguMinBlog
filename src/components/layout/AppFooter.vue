@@ -20,7 +20,7 @@ function openAdminHint() {
     <div class="footer-inner">
       <div class="brand-mini">
         <span class="seal">
-          <MagicIcon name="flame" :size="15" />
+          <img src="/assets/megumin/logo.png" alt="站点 LOGO" />
         </span>
         <div>
           <strong>{{ site.title }}</strong>
@@ -76,16 +76,20 @@ function openAdminHint() {
 }
 
 .seal {
-  width: 34px;
+  width: 38px;
   height: 34px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  border: 1px solid rgba(217, 172, 88, 0.22);
-  background: rgba(38, 24, 30, 0.8);
-  color: var(--c-gold);
-  opacity: 0.8;
+  flex: none;
+}
+
+.seal img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.5));
 }
 
 .brand-mini strong {

@@ -167,8 +167,8 @@ onMounted(() => {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(96deg, rgba(13, 9, 16, 0.92) 0%, rgba(15, 11, 19, 0.72) 46%, rgba(16, 12, 20, 0.28) 100%),
-    linear-gradient(180deg, rgba(16, 12, 20, 0.2), rgba(13, 9, 16, 0.9));
+    linear-gradient(96deg, rgba(13, 9, 16, 0.5) 0%, rgba(15, 11, 19, 0.5) 46%, rgba(16, 12, 20, 0) 100%),
+    linear-gradient(180deg, rgba(16, 12, 20, 0), rgba(13, 9, 16, 0));
 }
 
 .head-inner {

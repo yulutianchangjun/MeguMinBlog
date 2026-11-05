@@ -177,10 +177,6 @@ onBeforeUnmount(() => {
     <div class="body mage-card paper-veil">
       <div class="prose" v-html="rendered.html"></div>
 
-      <div class="scroll-end" aria-hidden="true">
-        <span class="scroll-word">手记终</span>
-      </div>
-
       <div v-if="post.tags.length" class="tags">
         <MagicIcon name="spark" :size="12" />
         <span v-for="tag in post.tags" :key="tag" class="tag">#{{ tag }}</span>
@@ -419,37 +415,11 @@ onBeforeUnmount(() => {
   z-index: 1;
 }
 
-.scroll-end {
-  position: relative;
-  width: 320px;
-  max-width: 82%;
-  aspect-ratio: 760 / 616;
-  margin: 32px auto 10px;
-  background: var(--tex-scroll) center / 100% 100% no-repeat;
-  opacity: 0.82;
-  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.55));
-}
 
-.scroll-end::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 6px;
-  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.18);
-  pointer-events: none;
-}
 
-.scroll-word {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  transform: translate(-50%, -50%) rotate(-1.6deg);
-  font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 0.34em;
-  color: #7d3a28;
-  text-indent: 0.42em;
-}
+
+
+
 
 .tags {
   display: flex;

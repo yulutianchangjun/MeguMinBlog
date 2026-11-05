@@ -6,7 +6,7 @@
       "title": "爆裂魔法理论",
       "subtitle": "Explosion Theory",
       "description": "从咏唱结构、魔力回路到伦理学，把「一发」研究到底的四篇手记。",
-      "cover": "assets/megumin/megumin-cast.png",
+      "cover": "assets/megumin/megumin-cast.webp",
       "runes": "EXPLOSION",
       "order": 1
     },
@@ -15,7 +15,7 @@
       "title": "红魔族的日常",
       "subtitle": "Red Demon Days",
       "description": "一个全是怪人的村子里，早晨、猫和一顶帽子。",
-      "cover": "assets/megumin/megumin-chibi.png",
+      "cover": "assets/megumin/megumin-chibi.webp",
       "runes": "AKUSERU",
       "order": 2
     },
@@ -24,7 +24,7 @@
       "title": "异世界旅途",
       "subtitle": "World Travel",
       "description": "用爆炸给大地做记号，在雨天停下来，在边境教三个孩子魔法。",
-      "cover": "assets/megumin/megumin-back.png",
+      "cover": "assets/megumin/megumin-back.webp",
       "runes": "JOURNEY",
       "order": 3
     }

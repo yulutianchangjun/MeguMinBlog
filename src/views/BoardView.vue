@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { NModal } from 'naive-ui'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import { formatDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
@@ -18,7 +17,12 @@ const walls: { key: BoardWall; label: string; en: string; hint: string }[] = [
 ]
 
 const capacity = 5
-const previewMessage = ref<BoardMessage | null>(null)
+const previewId = ref<string | null>(null)
+const closing = ref(false)
+const flipNote = ref<HTMLElement | null>(null)
+const sourceRect = ref<DOMRect | null>(null)
+let closeTimer: number | undefined
+let finished = true
 const batches = ref(1)
 const composing = ref(false)
 const activeWall = ref<BoardWall>('top')
@@ -92,12 +96,9 @@ const previewStyle = computed(() => ({
   color: form.value.fontColor,
 }))
 
-const previewOpen = computed({
-  get: () => Boolean(previewMessage.value),
-  set: (value: boolean) => {
-    if (!value) previewMessage.value = null
-  },
-})
+const previewMessage = computed(
+  () => interaction.messages.find((message) => message.id === previewId.value) ?? null,
+)
 
 const previewWall = computed(
   () => walls.find((wall) => wall.key === previewMessage.value?.wall)?.label ?? '',
@@ -111,9 +112,89 @@ const previewBatch = computed(() => {
   return index >= 0 ? index + 1 : 1
 })
 
-function openMessage(message: BoardMessage) {
-  previewMessage.value = message
+function noteTransform(message: BoardMessage, dx: number, dy: number, scale: number) {
+  return `translate3d(${dx}px, ${dy}px, 0) rotate(${message.rotation}deg) scale(${scale})`
 }
+
+async function openMessage(message: BoardMessage, event?: MouseEvent | KeyboardEvent) {
+  const trigger = event?.currentTarget as HTMLElement | undefined
+  if (trigger) sourceRect.value = trigger.getBoundingClientRect()
+  finished = false
+  closing.value = false
+  previewId.value = message.id
+  document.body.style.overflow = 'hidden'
+  window.addEventListener('keydown', onKeydown)
+
+  await nextTick()
+  const note = flipNote.value
+  const source = sourceRect.value
+  if (!note || !source) return
+
+  const target = note.getBoundingClientRect()
+  const scale = Math.min(source.width / target.width, source.height / target.height)
+  const dx = source.left + source.width / 2 - (target.left + target.width / 2)
+  const dy = source.top + source.height / 2 - (target.top + target.height / 2)
+
+  note.style.transition = 'none'
+  note.style.transformOrigin = 'center center'
+  note.style.transform = noteTransform(message, dx, dy, scale)
+  void note.offsetWidth
+  requestAnimationFrame(() => {
+    if (!flipNote.value) return
+    flipNote.value.style.transition = 'transform 520ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+    flipNote.value.style.transform = 'translate3d(0, 0, 0) rotate(0deg) scale(1)'
+  })
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') requestClose()
+}
+
+function requestClose() {
+  if (!previewMessage.value || closing.value) return
+  const note = flipNote.value
+  const source = sourceRect.value
+  const message = previewMessage.value
+  if (!note || !source) {
+    finishClose()
+    return
+  }
+  closing.value = true
+  const target = note.getBoundingClientRect()
+  const scale = Math.min(source.width / target.width, source.height / target.height)
+  const dx = source.left + source.width / 2 - (target.left + target.width / 2)
+  const dy = source.top + source.height / 2 - (target.top + target.height / 2)
+
+  note.style.transition = 'transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1)'
+  note.style.transform = noteTransform(message, dx, dy, scale)
+  note.addEventListener('transitionend', finishClose, { once: true })
+  closeTimer = window.setTimeout(finishClose, 560)
+}
+
+function finishClose() {
+  if (finished) return
+  finished = true
+  window.clearTimeout(closeTimer)
+  window.removeEventListener('keydown', onKeydown)
+  document.body.style.overflow = ''
+  closing.value = false
+  previewId.value = null
+  sourceRect.value = null
+}
+
+function removePreview() {
+  const message = previewMessage.value
+  if (!message) return
+  remove(message)
+  finished = false
+  finishClose()
+}
+
+onBeforeUnmount(() => {
+  window.clearTimeout(closeTimer)
+  window.removeEventListener('keydown', onKeydown)
+  document.body.style.overflow = ''
+})
 
 function fullTime(value: number) {
   return formatDate(value, 'YYYY.MM.DD HH:mm')
@@ -245,12 +326,12 @@ onMounted(() => {
               v-for="message in cardsOf('top')"
               :key="message.id"
               class="note"
-              :class="[`t-${message.texture}`, { pinned: message.pinned }]"
+              :class="[`t-${message.texture}`, { pinned: message.pinned, 'is-ghost': previewId === message.id }]"
               :style="{ backgroundColor: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
               role="button"
               tabindex="0"
-              @click="openMessage(message)"
-              @keydown.enter="openMessage(message)"
+              @click="openMessage(message, $event)"
+              @keydown.enter="openMessage(message, $event)"
             >
               <span class="pin"></span>
               <p class="note-text">{{ message.content }}</p>
@@ -274,12 +355,12 @@ onMounted(() => {
               v-for="message in cardsOf('left')"
               :key="message.id"
               class="note side"
-              :class="[`t-${message.texture}`, { pinned: message.pinned }]"
+              :class="[`t-${message.texture}`, { pinned: message.pinned, 'is-ghost': previewId === message.id }]"
               :style="{ backgroundColor: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
               role="button"
               tabindex="0"
-              @click="openMessage(message)"
-              @keydown.enter="openMessage(message)"
+              @click="openMessage(message, $event)"
+              @keydown.enter="openMessage(message, $event)"
             >
               <span class="pin left-pin"></span>
               <p class="note-text">{{ message.content }}</p>
@@ -440,12 +521,12 @@ onMounted(() => {
               v-for="message in cardsOf('right')"
               :key="message.id"
               class="note side"
-              :class="[`t-${message.texture}`, { pinned: message.pinned }]"
+              :class="[`t-${message.texture}`, { pinned: message.pinned, 'is-ghost': previewId === message.id }]"
               :style="{ backgroundColor: message.bgColor, color: message.fontColor, transform: `rotate(${message.rotation}deg)` }"
               role="button"
               tabindex="0"
-              @click="openMessage(message)"
-              @keydown.enter="openMessage(message)"
+              @click="openMessage(message, $event)"
+              @keydown.enter="openMessage(message, $event)"
             >
               <span class="pin right-pin"></span>
               <p class="note-text">{{ message.content }}</p>
@@ -464,53 +545,56 @@ onMounted(() => {
       </div>
     </section>
 
-    <n-modal
-      v-if="previewMessage"
-      v-model:show="previewOpen"
-      :mask-closable="true"
-      transform-origin="center"
-    >
-      <div class="note-modal mage-card">
-        <button class="modal-close" aria-label="关闭" @click="previewOpen = false">
-          <MagicIcon name="close" :size="15" />
-        </button>
-        <div class="modal-head">
-          <span class="eyebrow"><i class="tag-dot"></i>Message · {{ previewWall }}</span>
-          <span class="modal-batch">第 {{ previewBatch }} 批 · 软木墙</span>
-        </div>
-
+    <Teleport to="body">
+      <Transition name="flip-fade">
         <div
-          class="note-full"
-          :class="`t-${previewMessage.texture}`"
-          :style="{ backgroundColor: previewMessage.bgColor, color: previewMessage.fontColor }"
+          v-if="previewMessage"
+          class="flip-overlay"
+          :class="{ 'is-closing': closing }"
+          @click.self="requestClose"
         >
-          <span class="modal-pin"></span>
-          <p class="note-full-text">{{ previewMessage.content }}</p>
-          <div class="note-full-sign">
-            <strong>{{ previewMessage.author }}</strong>
-            <em>{{ fullTime(previewMessage.createdAt) }}</em>
-          </div>
-        </div>
+          <div class="flip-dialog" role="dialog" aria-modal="true" :aria-label="`${previewMessage.author} 的留言`">
+            <div class="flip-head">
+              <span class="eyebrow"><i class="tag-dot"></i>Message · {{ previewWall }}</span>
+              <span class="modal-batch">第 {{ previewBatch }} 批</span>
+              <button class="modal-close" aria-label="关闭" @click="requestClose">
+                <MagicIcon name="close" :size="15" />
+              </button>
+            </div>
 
-        <div class="modal-foot">
-          <span class="modal-meta">
-            <MagicIcon name="pin" :size="12" />
-            {{ previewWall }} · {{ previewMessage.texture === 'none' ? '素纸' : previewMessage.texture === 'paper' ? '羊皮纸' : previewMessage.texture === 'grid' ? '方格纸' : '星屑' }}
-            <em v-if="previewMessage.pinned">已置顶</em>
-          </span>
-          <div v-if="auth.isAdmin" class="modal-actions">
-            <button class="mini-btn" @click="togglePin(previewMessage)">
-              <MagicIcon name="pin" :size="12" />
-              {{ previewMessage.pinned ? '取消置顶' : '置顶' }}
-            </button>
-            <button class="mini-btn danger" @click="remove(previewMessage); previewOpen = false">
-              <MagicIcon name="trash" :size="12" />
-              取下
-            </button>
+            <div
+              ref="flipNote"
+              class="note-full flip-note"
+              :class="`t-${previewMessage.texture}`"
+              :style="{ backgroundColor: previewMessage.bgColor, color: previewMessage.fontColor }"
+            >
+              <span class="modal-pin"></span>
+              <p class="note-full-text">{{ previewMessage.content }}</p>
+              <div class="note-full-sign">
+                <strong>{{ previewMessage.author }}</strong>
+                <em>{{ fullTime(previewMessage.createdAt) }}</em>
+              </div>
+            </div>
+
+            <div class="flip-foot">
+              <span class="modal-meta">
+                <em v-if="previewMessage.pinned">已置顶</em>
+              </span>
+              <div v-if="auth.isAdmin" class="modal-actions">
+                <button class="mini-btn" @click="togglePin(previewMessage)">
+                  <MagicIcon name="pin" :size="12" />
+                  {{ previewMessage.pinned ? '取消置顶' : '置顶' }}
+                </button>
+                <button class="mini-btn danger" @click="removePreview">
+                  <MagicIcon name="trash" :size="12" />
+                  取下
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </n-modal>
+      </Transition>
+    </Teleport>
 
     <section class="archive mage-card">
       <div class="archive-head">
@@ -973,6 +1057,22 @@ onMounted(() => {
   background-repeat: no-repeat, no-repeat;
 }
 
+.note.is-ghost {
+  opacity: 0.16;
+  pointer-events: none;
+  box-shadow: none;
+  filter: grayscale(0.25);
+}
+
+.note.is-ghost::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px dashed rgba(242, 219, 166, 0.5);
+  pointer-events: none;
+}
+
 .empty-slot {
   border-radius: 3px;
   border: 1px dashed rgba(242, 219, 166, 0.18);
@@ -1325,48 +1425,78 @@ onMounted(() => {
   background: rgba(165, 42, 54, 0.4);
 }
 
-/* ---------- 放大预览 ---------- */
+/* ---------- 放大预览（FLIP 抽取） ---------- */
 
-.note-modal {
-  position: relative;
+.flip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(9, 6, 13, 0.66);
+  backdrop-filter: blur(3px);
+  transition: background 0.3s var(--ease), backdrop-filter 0.3s var(--ease);
+}
+
+.flip-overlay.is-closing {
+  background: rgba(9, 6, 13, 0);
+  backdrop-filter: blur(0);
+}
+
+.flip-dialog {
   width: min(92vw, 560px);
-  padding: 22px 22px 18px;
-  background:
-    radial-gradient(120% 100% at 85% 0%, rgba(165, 42, 54, 0.28), transparent 58%),
-    linear-gradient(160deg, #2a2230, #191420 62%, #141019);
-  border-color: rgba(217, 172, 88, 0.32);
-  box-shadow: 0 50px 90px -50px #000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.flip-head,
+.flip-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 172, 88, 0.2);
+  background: rgba(18, 13, 22, 0.82);
+  backdrop-filter: blur(6px);
+  transition: opacity 0.26s var(--ease);
+}
+
+.flip-head {
+  padding-right: 8px;
+}
+
+.flip-foot {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.is-closing .flip-head,
+.is-closing .flip-foot {
+  opacity: 0;
 }
 
 .modal-close {
-  position: absolute;
-  right: 12px;
-  top: 12px;
-  width: 28px;
-  height: 28px;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   border: 1px solid rgba(217, 172, 88, 0.2);
-  background: rgba(16, 12, 20, 0.6);
+  background: rgba(12, 9, 16, 0.7);
   color: var(--c-text-2);
   cursor: pointer;
-  z-index: 2;
+  transition: all 0.22s var(--ease);
 }
 
 .modal-close:hover {
   color: var(--c-gold-2);
-  border-color: rgba(217, 172, 88, 0.5);
-}
-
-.modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding-right: 30px;
+  border-color: rgba(217, 172, 88, 0.55);
 }
 
 .modal-batch {
@@ -1374,19 +1504,25 @@ onMounted(() => {
   font-size: 9px;
   letter-spacing: 0.08em;
   color: var(--c-muted);
+  white-space: nowrap;
 }
 
 .note-full {
   position: relative;
-  min-height: 280px;
-  padding: 34px 28px 22px;
+  min-height: 260px;
+  padding: 36px 30px 24px;
   border-radius: 4px;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   box-shadow:
-    0 18px 30px -18px rgba(0, 0, 0, 0.9),
+    0 26px 44px -22px rgba(0, 0, 0, 0.95),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transform: rotate(-0.6deg);
+}
+
+.flip-note {
+  transform-origin: center center;
+  will-change: transform;
 }
 
 .modal-pin {
@@ -1402,7 +1538,7 @@ onMounted(() => {
 }
 
 .note-full-text {
-  margin: 0 0 24px;
+  margin: 0 0 14px;
   font-size: 15.5px;
   line-height: 2.05;
   letter-spacing: 0.02em;
@@ -1412,7 +1548,7 @@ onMounted(() => {
 }
 
 .note-full-sign {
-  margin-top: auto;
+  margin-top: 0;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
@@ -1430,15 +1566,6 @@ onMounted(() => {
   font-style: normal;
   font-family: var(--font-mono);
   font-size: 9.5px;
-}
-
-.modal-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 14px;
-  flex-wrap: wrap;
 }
 
 .modal-meta {
@@ -1529,6 +1656,16 @@ onMounted(() => {
 
 .archive-btn.active em {
   color: var(--c-gold);
+}
+
+.flip-fade-enter-active,
+.flip-fade-leave-active {
+  transition: opacity 0.28s var(--ease);
+}
+
+.flip-fade-enter-from,
+.flip-fade-leave-to {
+  opacity: 0;
 }
 
 .flip-enter-active,

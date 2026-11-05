@@ -1,98 +1,145 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import { ChimePlayer, tunes } from '@/lib/chime'
+import AddMusicModal from '@/components/widgets/AddMusicModal.vue'
 import { toast } from '@/lib/toast'
+import { useAuthStore } from '@/stores/auth'
+import { usePlayerStore, type Track } from '@/stores/player'
 
-const player = new ChimePlayer()
-const index = ref(0)
-const playing = ref(false)
-const progress = ref(0)
-const volume = ref(0.42)
+const player = usePlayerStore()
+const auth = useAuthStore()
 
-const tune = computed(() => tunes[index.value])
+const listOpen = ref(false)
+const addOpen = ref(false)
 
-function syncProgress(ratio: number) {
-  progress.value = ratio
+const track = computed(() => player.current)
+const cover = computed(() => player.coverUrl(track.value))
+const isSynth = computed(() => track.value?.kind === 'synth')
+const canSeek = computed(() => !isSynth.value)
+const percent = computed(() => Math.round(player.progress * 100))
+
+const timeLabel = (value: number): string => {
+  if (!Number.isFinite(value) || value < 0) return '00:00'
+  const total = Math.floor(value)
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
-onMounted(() => {
-  player.onProgress = syncProgress
-  player.setVolume(volume.value)
-})
+const elapsed = computed(() => timeLabel(player.currentTime))
+const total = computed(() => (player.duration ? timeLabel(player.duration) : '--:--'))
+const synthLabel = computed(() => (player.currentTune ? `${player.currentTune.bpm} BPM · 循环` : '循环'))
 
-onBeforeUnmount(() => {
-  player.onProgress = null
-  player.destroy()
-})
-
-async function toggle() {
-  if (playing.value) {
-    player.pause()
-    playing.value = false
-    return
-  }
-  try {
-    await player.play()
-    playing.value = true
-  } catch {
-    playing.value = false
-    toast.warning('浏览器拦截了音频播放，请再点一次播放按钮')
-  }
+function toggle() {
+  void player.toggle()
 }
 
-function step(delta: number) {
-  index.value = (index.value + delta + tunes.length) % tunes.length
-  player.load(tune.value, playing.value)
-  progress.value = 0
+function prev() {
+  void player.prev()
+}
+
+function next() {
+  void player.next()
+}
+
+function select(index: number) {
+  void player.play(index)
+}
+
+function onSeek(event: MouseEvent) {
+  if (!canSeek.value) return
+  const element = event.currentTarget as HTMLElement
+  const rect = element.getBoundingClientRect()
+  if (!rect.width) return
+  player.seek((event.clientX - rect.left) / rect.width)
 }
 
 function onVolume(event: Event) {
-  const value = Number((event.target as HTMLInputElement).value)
-  volume.value = value
-  player.setVolume(value)
+  player.setVolume(Number((event.target as HTMLInputElement).value))
 }
+
+async function remove(item: Track) {
+  await player.removeTrack(item.id)
+  toast.info(`已移除：${item.title}`)
+}
+
+function kindLabel(item: Track): string {
+  if (item.kind === 'synth') return '合成'
+  return item.kind === 'file' ? '本地' : '外链'
+}
+
+onMounted(() => {
+  void player.hydrate()
+})
 </script>
 
 <template>
   <section class="music mage-card">
     <div class="panel-title">
       <span>Magic Player</span>
-      <span class="cn">魔法留声机</span>
+      <div class="head-right">
+        <span class="cn">魔法留声机</span>
+        <button v-if="auth.isAdmin" class="add-btn" title="添加音乐" @click="addOpen = true">
+          <MagicIcon name="plus" :size="12" />
+        </button>
+      </div>
     </div>
 
     <div class="disc-row">
-      <div class="disc" :class="{ spin: playing }">
-        <span class="groove"></span>
-        <span class="groove inner"></span>
-        <span class="label"></span>
+      <div class="disc" :class="{ spin: player.playing, 'has-cover': Boolean(cover) }">
+        <img v-if="cover" class="disc-cover" :src="cover" alt="" />
+        <template v-else>
+          <span class="groove"></span>
+          <span class="groove inner"></span>
+          <span class="label"></span>
+        </template>
         <span class="hole"></span>
       </div>
+
       <div class="meta">
         <div class="title-row">
-          <strong>{{ tune.title }}</strong>
-          <span class="eq" :class="{ on: playing }" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <strong>{{ track?.title ?? '未选择曲目' }}</strong>
+          <span class="eq" :class="{ on: player.playing }" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         </div>
-        <span class="sub">{{ tune.subtitle }}</span>
-        <div class="progress">
-          <span :style="{ width: `${Math.max(2, progress * 100)}%` }"></span>
+        <span class="sub">{{ track?.artist ?? '—' }}</span>
+
+        <div
+          class="progress"
+          :class="{ seekable: canSeek }"
+          role="slider"
+          :aria-valuenow="percent"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-label="canSeek ? '播放进度' : '循环进度'"
+          @click="onSeek"
+        >
+          <span :style="{ width: `${Math.max(2, player.progress * 100)}%` }"></span>
+        </div>
+
+        <div class="time-row">
+          <template v-if="isSynth">
+            <span>{{ player.playing ? `${percent}%` : '就绪' }}</span>
+            <span>{{ synthLabel }}</span>
+          </template>
+          <template v-else>
+            <span>{{ elapsed }}</span>
+            <span>{{ total }}</span>
+          </template>
         </div>
       </div>
     </div>
 
     <div class="controls">
-      <button class="ctrl" title="上一首" @click="step(-1)">
+      <button class="ctrl" title="上一首" @click="prev">
         <MagicIcon name="prev" :size="15" />
       </button>
       <button
         class="ctrl main"
-        :title="playing ? '暂停' : '播放'"
-        :aria-pressed="playing"
+        :title="player.playing ? '暂停' : '播放'"
+        :aria-pressed="player.playing"
         @click="toggle"
       >
-        <MagicIcon :name="playing ? 'pause' : 'play'" :size="16" />
+        <MagicIcon :name="player.playing ? 'pause' : 'play'" :size="16" />
       </button>
-      <button class="ctrl" title="下一首" @click="step(1)">
+      <button class="ctrl" title="下一首" @click="next">
         <MagicIcon name="next" :size="15" />
       </button>
 
@@ -103,20 +150,77 @@ function onVolume(event: Event) {
           min="0"
           max="1"
           step="0.01"
-          :value="volume"
+          :value="player.volume"
           aria-label="音量"
           @input="onVolume"
         />
       </div>
+
+      <button
+        class="ctrl list-btn"
+        :class="{ on: listOpen }"
+        :title="`播放列表（${player.playlist.length}）`"
+        @click="listOpen = !listOpen"
+      >
+        <MagicIcon name="menu" :size="15" />
+        <span class="count">{{ player.playlist.length }}</span>
+      </button>
     </div>
 
-    <p class="note">Web Audio 实时合成 · 无需外部音频文件</p>
+    <transition name="list">
+      <div v-if="listOpen" class="playlist">
+        <div class="pl-head">
+          <span>播放列表</span>
+          <em>{{ player.customCount }} 首自定义 / {{ player.playlist.length }} 首</em>
+        </div>
+        <div
+          v-for="(item, i) in player.playlist"
+          :key="item.id"
+          class="pl-item"
+          :class="{ active: i === player.index }"
+          role="button"
+          tabindex="0"
+          @click="select(i)"
+          @keydown.enter="select(i)"
+        >
+          <span class="pl-no">{{ String(i + 1).padStart(2, '0') }}</span>
+          <span class="pl-info">
+            <strong>{{ item.title }}</strong>
+            <em>{{ item.artist }}</em>
+          </span>
+          <span class="pl-kind">{{ kindLabel(item) }}</span>
+          <button
+            v-if="auth.isAdmin && item.kind !== 'synth'"
+            class="pl-del"
+            title="移除"
+            @click.stop="remove(item)"
+          >
+            <MagicIcon name="trash" :size="11" />
+          </button>
+        </div>
+      </div>
+    </transition>
+
+    <p v-if="player.error" class="error">{{ player.error }}</p>
+
+    <p class="note">
+      <template v-if="player.customCount">本地音频缓存在 IndexedDB · 外链仅保存地址</template>
+      <template v-else>Web Audio 实时合成 · 无需外部音频文件</template>
+    </p>
+
+    <AddMusicModal v-model:show="addOpen" />
   </section>
 </template>
 
 <style scoped>
 .music {
   padding-bottom: 14px;
+}
+
+.head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .panel-title .cn {
@@ -126,11 +230,31 @@ function onVolume(event: Event) {
   font-family: var(--font-body);
 }
 
+.add-btn {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 172, 88, 0.28);
+  background: rgba(20, 16, 26, 0.6);
+  color: var(--c-gold);
+  cursor: pointer;
+  transition: all 0.22s var(--ease);
+}
+
+.add-btn:hover {
+  color: #fff3e0;
+  border-color: rgba(242, 219, 166, 0.6);
+  background: rgba(165, 42, 54, 0.4);
+}
+
 .disc-row {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px 18px 10px;
+  padding: 16px 18px 8px;
 }
 
 .disc {
@@ -144,10 +268,17 @@ function onVolume(event: Event) {
   background: radial-gradient(circle at 32% 28%, #2c2130, #16111b 70%);
   border: 1px solid rgba(217, 172, 88, 0.28);
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8), 0 6px 16px -10px #000;
+  overflow: hidden;
 }
 
 .disc.spin {
   animation: discSpin 5s linear infinite;
+}
+
+.disc-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .groove {
@@ -155,7 +286,6 @@ function onVolume(event: Event) {
   inset: 8px;
   border-radius: 50%;
   border: 1px solid rgba(217, 172, 88, 0.16);
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.015);
 }
 
 .groove.inner {
@@ -178,12 +308,29 @@ function onVolume(event: Event) {
   border-radius: 50%;
   background: #0f0c13;
   border: 1px solid rgba(217, 172, 88, 0.5);
+  z-index: 2;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
 }
 
 .title-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+}
+
+.title-row strong {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: var(--c-paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .eq {
@@ -191,6 +338,7 @@ function onVolume(event: Event) {
   align-items: flex-end;
   gap: 2px;
   height: 10px;
+  flex: none;
   opacity: 0;
   transition: opacity 0.24s var(--ease);
 }
@@ -217,38 +365,16 @@ function onVolume(event: Event) {
   animation-delay: 0.54s;
 }
 
-@keyframes eqBeat {
-  0%, 100% {
-    height: 3px;
-  }
-  50% {
-    height: 9px;
-  }
-}
-
-.meta {
-  min-width: 0;
-  flex: 1;
-}
-
-.meta strong {
+.sub {
   display: block;
-  font-family: var(--font-display);
-  font-size: 13.5px;
+  font-family: var(--font-mono);
+  font-size: 9px;
   letter-spacing: 0.04em;
-  color: var(--c-paper);
+  color: var(--c-muted);
+  margin: 2px 0 7px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.meta .sub {
-  display: block;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.06em;
-  color: var(--c-muted);
-  margin-bottom: 8px;
 }
 
 .progress {
@@ -258,26 +384,42 @@ function onVolume(event: Event) {
   overflow: hidden;
 }
 
+.progress.seekable {
+  cursor: pointer;
+}
+
+.progress.seekable:hover {
+  height: 4px;
+}
+
 .progress span {
   display: block;
   height: 100%;
   border-radius: 99px;
   background: linear-gradient(90deg, #641c2b, #d9ac58);
-  transition: width 0.18s linear;
+  transition: width 0.14s linear;
+}
+
+.time-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  color: var(--c-muted);
 }
 
 .controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   padding: 4px 18px 0;
 }
 
 .ctrl {
   width: 30px;
   height: 30px;
-  display: grid;
-  place-items: center;
+  flex: none;
   border-radius: 50%;
   border: 1px solid rgba(217, 172, 88, 0.18);
   background: rgba(20, 16, 25, 0.7);
@@ -303,13 +445,13 @@ function onVolume(event: Event) {
 .vol {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   margin-left: auto;
   color: var(--c-muted);
 }
 
 .vol input {
-  width: 62px;
+  width: 54px;
   height: 3px;
   appearance: none;
   border-radius: 99px;
@@ -327,16 +469,184 @@ function onVolume(event: Event) {
   cursor: pointer;
 }
 
+.list-btn {
+  position: relative;
+}
+
+.list-btn.on {
+  color: var(--c-gold-2);
+  border-color: rgba(217, 172, 88, 0.45);
+}
+
+.list-btn .count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: linear-gradient(150deg, #c73c4b, #7a2130);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  line-height: 13px;
+  text-align: center;
+}
+
+.playlist {
+  margin: 12px 12px 0;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 172, 88, 0.16);
+  background: rgba(12, 9, 16, 0.55);
+  max-height: 216px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.pl-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 4px 7px;
+  border-bottom: 1px dashed rgba(217, 172, 88, 0.14);
+  margin-bottom: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: var(--c-gold);
+}
+
+.pl-head em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--c-muted);
+}
+
+.pl-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease);
+}
+
+.pl-item:hover,
+.pl-item:focus-visible {
+  background: rgba(217, 172, 88, 0.07);
+  outline: none;
+}
+
+.pl-item.active {
+  background: linear-gradient(90deg, rgba(165, 42, 54, 0.32), transparent);
+}
+
+.pl-no {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--c-gold-dim);
+  width: 14px;
+  flex: none;
+}
+
+.pl-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.pl-info strong {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pl-info em {
+  font-style: normal;
+  font-size: 8.5px;
+  color: var(--c-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pl-kind {
+  flex: none;
+  font-size: 7.5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(217, 172, 88, 0.2);
+  color: var(--c-muted);
+}
+
+.pl-del {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--c-muted);
+  cursor: pointer;
+}
+
+.pl-del:hover {
+  color: #ffb3bd;
+  background: rgba(199, 60, 75, 0.2);
+}
+
+.error {
+  margin: 10px 18px 0;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(199, 60, 75, 0.35);
+  background: rgba(165, 42, 54, 0.14);
+  color: #ffb3bd;
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
 .note {
   margin: 10px 18px 0;
-  font-size: 9.5px;
-  letter-spacing: 0.05em;
+  font-size: 9px;
+  letter-spacing: 0.04em;
   color: rgba(139, 128, 120, 0.7);
+}
+
+.list-enter-active,
+.list-leave-active {
+  transition: opacity 0.22s var(--ease), transform 0.22s var(--ease);
+}
+
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 @keyframes discSpin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes eqBeat {
+  0%, 100% {
+    height: 3px;
+  }
+  50% {
+    height: 9px;
   }
 }
 </style>

@@ -6,7 +6,7 @@ export const site: SiteConfig = {
   author: {
     name: '惠惠',
     enName: 'Megumin',
-    avatar: 'assets/megumin/megumin-chibi.png',
+    avatar: 'assets/megumin/megumin-chibi.webp',
     bio: '红魔族大魔法使。一日一爆，专精爆裂魔法。副业是写日记，主业是找没人的荒野。',
     location: '阿克塞尔 · 红魔之里',
     socials: [

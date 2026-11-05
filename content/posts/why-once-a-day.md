@@ -6,7 +6,7 @@ categories:
   - 爆裂魔法
   - 魔法研究
 collections: explosion-theory
-cover: assets/megumin/megumin-cast.png
+cover: assets/megumin/megumin-cast.webp
 excerpt: 有人问我，为什么不多放几发？因为爆裂魔法的意义从来不是数量，而是那一刻把世界点燃的浓度。
 pinned: true
 ---

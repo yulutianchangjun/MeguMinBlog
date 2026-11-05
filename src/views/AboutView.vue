@@ -42,7 +42,9 @@ const stack = [
   <div class="about">
     <header class="hero mage-card">
       <div class="portrait">
-        <img src="/assets/megumin/megumin-cast.png" alt="惠惠" />
+        <img src="/assets/megumin/megumin-cast.webp" alt="惠惠" />
+        <div class="mask-left"></div>
+        <div class="mask-right"></div>
         <span class="frame"></span>
       </div>
       <div class="intro">
@@ -175,7 +177,7 @@ const stack = [
   overflow: hidden;
   border: 1px solid rgba(217, 172, 88, 0.28);
   box-shadow: 0 24px 40px -26px #000;
-  background: radial-gradient(80% 100% at 50% 10%, #7d3040, #2b121b 74%);
+  background: radial-gradient(80% 100% at 70% 10%, #7d3040, #2b121b 74%);
 }
 
 .portrait img {
@@ -183,8 +185,36 @@ const stack = [
   height: 300px;
   object-fit: cover;
   object-position: center 18%;
-  mix-blend-mode: multiply;
-  filter: contrast(1.03) brightness(1.2) saturate(1.08);
+  filter: contrast(1.03) brightness(1) saturate(1.08);
+  display: block;
+}
+
+.mask-left {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 52% 100%, 0 100%);
+  background: rgba(30, 10, 18, 0.7); 
+  z-index: 1;
+  pointer-events: none;
+}
+
+.mask-right {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 52% 100%);
+  background: rgba(30, 10, 18, 0.25);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 内部边框 */
+.portrait .frame {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(217, 172, 88, 0.4);
+  border-radius: 8px;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .frame {

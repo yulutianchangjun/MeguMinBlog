@@ -254,7 +254,7 @@ onBeforeUnmount(() => {
 .fire-rain {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 999;
   pointer-events: none;
   overflow: hidden;
   mix-blend-mode: screen;
@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
 .fire-rain.inline {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 999;
 }
 
 canvas {

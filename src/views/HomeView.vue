@@ -118,7 +118,7 @@ function goBoard() {
       </div>
 
       <div class="hero-tag">
-        <img src="/assets/megumin/megumin-chibi.png" alt="" />
+        <img src="/assets/megumin/megumin-chibi.webp" alt="" />
         <div>
           <strong>{{ site.author.name }}</strong>
           <span>{{ site.author.enName }} · Lv.99</span>
@@ -295,8 +295,8 @@ function goBoard() {
   height: 100%;
   object-fit: cover;
   object-position: center center;
-  transform: scale(1.015);
-  filter: brightness(0.72) saturate(1.04) contrast(1.02);
+  transform: scale(1.02);
+  filter: blur(0.5px) brightness(1.12) saturate(1.06) contrast(1.02);
   z-index: 0;
   pointer-events: none;
 }
@@ -306,8 +306,8 @@ function goBoard() {
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(96deg, rgba(14, 10, 18, 0.94) 0%, rgba(15, 11, 19, 0.78) 38%, rgba(16, 12, 20, 0.32) 100%),
-    linear-gradient(180deg, rgba(16, 12, 20, 0.28) 0%, rgba(14, 10, 18, 0.55) 62%, rgba(13, 9, 16, 0.95) 100%);
+    linear-gradient(96deg, rgba(12, 8, 16, 0.8) 0%, rgba(12, 8, 16, 0.46) 44%, rgba(12, 8, 16, 0.08) 100%),
+    linear-gradient(180deg, rgba(12, 8, 16, 0.04) 0%, rgba(12, 8, 16, 0.14) 58%, rgba(12, 8, 16, 0.58) 100%);
 }
 
 .hero-dust {
@@ -365,7 +365,8 @@ function goBoard() {
   font-family: var(--font-display);
   font-size: 14px;
   letter-spacing: 0.08em;
-  color: var(--c-text-2);
+  color: #e6d9c9;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
 }
 
 .hero-actions {
@@ -375,6 +376,7 @@ function goBoard() {
 }
 
 .hero-stats {
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -908,12 +910,12 @@ function goBoard() {
   }
   .hero-art {
     object-position: 64% center;
-    filter: brightness(0.5) saturate(1.02);
+    filter: brightness(1.02) saturate(1.02);
   }
   .hero-veil {
     background:
-      linear-gradient(100deg, rgba(13, 9, 16, 0.95) 30%, rgba(15, 11, 19, 0.82) 70%, rgba(16, 12, 20, 0.6) 100%),
-      linear-gradient(180deg, rgba(16, 12, 20, 0.3), rgba(13, 9, 16, 0.9));
+      linear-gradient(100deg, rgba(12, 8, 16, 0.88) 22%, rgba(12, 8, 16, 0.6) 68%, rgba(12, 8, 16, 0.32) 100%),
+      linear-gradient(180deg, rgba(12, 8, 16, 0.06), rgba(12, 8, 16, 0.62));
   }
   .hero-dust {
     display: none;

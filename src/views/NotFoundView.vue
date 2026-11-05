@@ -17,7 +17,7 @@ const quote = quotes[Math.floor(Math.random() * quotes.length)]
 <template>
   <div class="not-found mage-card">
     <div class="art">
-      <img src="/assets/megumin/404.png" alt="404" />
+      <img src="/assets/megumin/404.webp" alt="404" />
       <div class="art-veil"></div>
     </div>
     <div class="text">
