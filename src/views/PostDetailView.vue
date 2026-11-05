@@ -25,7 +25,7 @@ const likeBurst = ref(false)
 const post = computed(() => content.allPosts.find((item) => item.id === route.params.id))
 const accessible = computed(() => {
   if (!post.value) return false
-  return auth.isAdmin || (!post.value.hidden && !post.value.draft)
+  return auth.isAdmin || (!post.value.hidden && !post.value.draft && post.value.public !== false)
 })
 
 const rendered = computed(() => renderMarkdown(post.value?.content ?? ''))
@@ -33,7 +33,6 @@ const minutes = computed(() => readingMinutes(post.value?.content ?? ''))
 const cover = computed(() => resolveAsset(post.value?.cover))
 const likes = computed(() => interaction.likeTotal(post.value?.id ?? ''))
 const liked = computed(() => interaction.hasLiked(post.value?.id ?? ''))
-const commentCount = computed(() => interaction.commentCount(post.value?.id ?? ''))
 
 const ordered = computed(() => content.publicPosts)
 const index = computed(() => ordered.value.findIndex((item) => item.id === post.value?.id))
@@ -41,6 +40,10 @@ const prevPost = computed(() => (index.value > 0 ? ordered.value[index.value - 1
 const nextPost = computed(() =>
   index.value >= 0 && index.value < ordered.value.length - 1 ? ordered.value[index.value + 1] : null,
 )
+
+function jumpComments() {
+  document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 function syncScroll() {
   const doc = document.documentElement
@@ -154,7 +157,10 @@ onBeforeUnmount(() => {
         <div class="meta">
           <span><MagicIcon name="calendar" :size="13" />{{ formatDate(post.date, 'YYYY 年 MM 月 DD 日') }}</span>
           <span><MagicIcon name="clock" :size="13" />{{ minutes }} 分钟阅读</span>
-          <span><MagicIcon name="comment" :size="13" />{{ commentCount }} 条评论</span>
+          <button class="meta-link" @click="jumpComments">
+            <MagicIcon name="comment" :size="13" />
+            GitHub 讨论
+          </button>
           <span v-if="post.updated"><MagicIcon name="edit" :size="13" />更新于 {{ formatDate(post.updated) }}</span>
         </div>
         <div class="hero-actions">
@@ -324,10 +330,26 @@ onBeforeUnmount(() => {
   color: var(--c-text-2);
 }
 
-.meta span {
+.meta span,
+.meta-link {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.meta-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  transition: color 0.22s var(--ease);
+}
+
+.meta-link:hover {
+  color: var(--c-gold-2);
 }
 
 .hero-actions {

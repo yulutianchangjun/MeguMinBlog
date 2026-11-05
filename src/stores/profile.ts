@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { adminApi, publicApi, type ApiCheckin, type ApiUv } from '@/api'
+import { apiReady } from '@/lib/http'
 import { readJSON, uid, writeJSON } from '@/lib/storage'
 
 export interface CheckinState {
@@ -33,15 +35,20 @@ export const useProfileStore = defineStore('profile', () => {
   const uv = ref<UvState>(readJSON<UvState>('uv', { days: {} }))
   const visitorId = ref<string>(readJSON<string>('visitor-id', ''))
   const today = ref(dayKey())
+  const remoteCheckin = ref<ApiCheckin | null>(null)
+  const remoteUv = ref<ApiUv | null>(null)
 
   if (!visitorId.value) {
     visitorId.value = uid('v-')
     writeJSON('visitor-id', visitorId.value)
   }
 
-  const checkedToday = computed(() => checkin.value.dates.includes(today.value))
+  const checkedToday = computed(() =>
+    remoteCheckin.value ? remoteCheckin.value.checkedToday : checkin.value.dates.includes(today.value),
+  )
 
   const streak = computed(() => {
+    if (remoteCheckin.value) return remoteCheckin.value.streak
     const set = new Set(checkin.value.dates)
     let cursor = set.has(today.value) ? today.value : shiftDay(today.value, -1)
     let count = 0
@@ -52,7 +59,9 @@ export const useProfileStore = defineStore('profile', () => {
     return count
   })
 
-  const totalDays = computed(() => checkin.value.total || checkin.value.dates.length)
+  const totalDays = computed(() =>
+    remoteCheckin.value ? remoteCheckin.value.total : checkin.value.total || checkin.value.dates.length,
+  )
 
   const badges = computed(() => [
     { key: 'spark', label: '初燃', desc: '首次签到', threshold: 1, icon: 'spark' },
@@ -72,7 +81,15 @@ export const useProfileStore = defineStore('profile', () => {
     return pending[0] ?? null
   })
 
-  function doCheckin(): { ok: boolean; streak: number } {
+  async function doCheckin(): Promise<{ ok: boolean; streak: number; message?: string }> {
+    if (apiReady) {
+      try {
+        remoteCheckin.value = await adminApi.checkin()
+        return { ok: true, streak: remoteCheckin.value.streak }
+      } catch (err) {
+        return { ok: false, streak: streak.value, message: err instanceof Error ? err.message : '签到失败' }
+      }
+    }
     if (checkedToday.value) return { ok: false, streak: streak.value }
     checkin.value = {
       dates: [...checkin.value.dates, today.value],
@@ -82,7 +99,29 @@ export const useProfileStore = defineStore('profile', () => {
     return { ok: true, streak: streak.value }
   }
 
+  async function loadCheckin(): Promise<void> {
+    if (!apiReady) return
+    try {
+      remoteCheckin.value = await publicApi.checkin()
+    } catch {
+      /* 后端不可用时保留本地统计 */
+    }
+  }
+
+  async function loadUv(): Promise<void> {
+    if (!apiReady) return
+    try {
+      remoteUv.value = await adminApi.uv()
+    } catch {
+      remoteUv.value = null
+    }
+  }
+
   function track(path: string) {
+    if (apiReady) {
+      const slug = path.startsWith('/posts/') ? path.slice('/posts/'.length) : undefined
+      void publicApi.track(path, slug).catch(() => undefined)
+    }
     const key = today.value
     const state = uv.value
     const entry = state.days[key] ?? { date: key, pv: 0, visitors: [], views: {} }
@@ -95,6 +134,7 @@ export const useProfileStore = defineStore('profile', () => {
   }
 
   const uvSeries = computed(() => {
+    if (remoteUv.value) return remoteUv.value.series
     const series: { date: string; label: string; pv: number; uv: number }[] = []
     for (let i = 13; i >= 0; i -= 1) {
       const key = shiftDay(today.value, -i)
@@ -110,6 +150,16 @@ export const useProfileStore = defineStore('profile', () => {
   })
 
   const uvSummary = computed(() => {
+    if (remoteUv.value) {
+      return {
+        pv: remoteUv.value.pv,
+        uv: remoteUv.value.uv,
+        todayPv: remoteUv.value.todayPv,
+        todayUv: remoteUv.value.todayUv,
+        topPages: [] as { path: string; count: number }[],
+        activeDays: remoteUv.value.activeDays,
+      }
+    }
     const days = Object.values(uv.value.days)
     const visitors = new Set<string>()
     let pv = 0
@@ -143,6 +193,8 @@ export const useProfileStore = defineStore('profile', () => {
     badges,
     nextBadge,
     doCheckin,
+    loadCheckin,
+    loadUv,
     track,
     uvSeries,
     uvSummary,

@@ -1,22 +1,67 @@
 # 爆裂魔法使的手记 · Megumin Blog
 
-一个以「爆裂魔法」为核心概念的暗黑复古魔幻风个人博客。Vue 3 + TypeScript + Vite + Pinia + Vue Router，纯静态、无后端，可直接部署到 GitHub Pages。
+一个以「爆裂魔法」为核心概念的暗黑复古魔幻风个人博客。**前后端分离架构**：Vue 3 + TypeScript + Vite + Pinia 前端，Spring Boot 3 + MySQL 8 + Redis 7 后端，Docker Compose + Nginx 一键部署。
 
 视觉素材取自仓库内 `meguminUI/slices/`（惠惠主题 UI 素材切片），调色板与布局按《个人博客系统架构与需求设计说明书》实现。
+
+> 本版（第五版）由 GitOps 纯静态方案切换为服务端方案，全部读写走 REST API。前端保留了**无后端时的只读降级**——后端不可用时，前台用构建期 Markdown 展示内容，但登录/留言/后台不可用并给出提示。完整部署步骤见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
 
 ---
 
 ## 快速开始
 
+### 前端
+
 ```bash
 npm install
-npm run dev        # 本地开发 http://localhost:5173
+npm run dev        # 本地开发 http://localhost:5173，读取 .env.development
 npm run build      # 生产构建，输出 dist/
 npm run preview    # 预览构建产物
 npm run typecheck  # vue-tsc 类型检查
 ```
 
-Node 版本建议 20+。
+Node 版本建议 20+。`.env.development` 默认 `VITE_API_BASE_URL=http://localhost:8080/api`。
+
+### 后端
+
+```bash
+# 准备 MySQL 8（建库 blog_db，utf8mb4_unicode_ci）与 Redis 7
+cd backend
+mvn -DskipTests package
+MYSQL_PASSWORD=你的密码 java -jar target/app.jar
+```
+
+`dev` profile 自动执行建表 + 种子数据，并按 `ADMIN_USERNAME` / `ADMIN_PASSWORD`（默认 `admin` / `Explosion@2026`）创建博主账号。
+
+### Docker Compose（生产）
+
+```bash
+cp .env.example .env    # 填 MYSQL_ROOT_PASSWORD / REDIS_PASSWORD / JWT_SECRET / ADMIN_PASSWORD
+npm ci && npm run build
+docker compose up -d --build
+```
+
+详见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
+
+---
+
+## 架构总览
+
+```
+Internet (HTTPS 443)
+        │
+        ▼
+   Nginx (frontend 容器)
+   ├── /            → Vue 3 SPA（dist/，try_files 回退 index.html）
+   ├── /uploads/    → 上传的封面 / 音频（宿主机 data/uploads）
+   └── /api/        → Spring Boot :8080 (backend 容器)
+                         ├── MySQL 8（文章、综集、留言、音乐、签到）
+                         └── Redis 7（JWT 会话、限流、PV/UV）
+```
+
+- **鉴权**：账号密码登录 → BCrypt 校验 → JWT（HS256，7 天）→ Redis 白名单；退出登录即删除会话，旧 token 立即失效。
+- **防刷**：Redis 分钟/小时双窗口限流（同 IP 每分钟 1 条、每小时 5 条留言）+ Cloudflare Turnstile 服务端校验 + Jsoup 文本净化。
+- **上传**：图片 8MB / 音频 30MB，UUID 文件名落盘 `data/uploads`，经 Nginx `/uploads/` 对外提供。
 
 ---
 
@@ -26,65 +71,22 @@ Node 版本建议 20+。
 | --- | --- |
 | 全局布局 | Header（LOGO / 导航 / 操作区）、左侧博主卡 + 音乐播放器、右侧日历 + 纪念日倒计时、Footer；响应式单列降级 |
 | 首页 | 打字机欢迎语、火雨与星屑粒子、近期精选、置顶留言走马灯、签到成就看板、综集速览 |
-| 日常流 | 多分类筛选、全文/标题实时搜索、最新/最早/最热排序、数字分页；筛选与页码同步至 URL Query + `KeepAlive` + 滚动位置还原；空结果时展示双栏空状态（镂空插画 + 清除筛选 / 回首页） |
-| 文章详情 | 封面 Hero（缺省回退主题色）、Markdown 渲染与代码高亮、右侧栏切换文章目录、滚动高亮与阅读进度、悬浮返回/回顶、点赞、复制链接、上下篇 |
-| 评论 | 访客填昵称即可发表一级评论；博主可置顶、删除、盖楼回复（唯一二级嵌套） |
-| 综集 | 横向轮播（滚动吸附 + 箭头/圆点）、封面等比完整展示 + 同图模糊底衬、合集内复用日常卡片、不提供全局检索 |
-| 留言墙 | 上/左/右三面软木板，每面每批 5 张；钉满自动封存并开启新批次，可回看历史批次；访客自定义底色、字色、纸纹与墙面；右下角签名与时间戳；点击卡片弹出全尺寸预览 |
-| 管理面板 | 隐藏唤起（连点头像 5 次或 `Ctrl + Shift + L`）、GitHub PAT / 离线口令鉴权、文章新建/编辑/删除/置顶/隐藏/草稿、**本地图片上传封面**、**编辑器内 `.md` 一键解析填充**、**综集新增/编辑/删除**、Markdown 预览、ZIP（Markdown + JSON）导出、`.md`/`.json`/`.zip` 拖拽导入、UV 仪表盘 |
-| 音乐播放器 | 内置 3 段 Web Audio 合成曲；博主可「添加音乐」——本地 MP3/FLAC/WAV 上传（IndexedDB 持久化）或填写外链/静态路径；**全局曲库弹窗**（Teleport 到 body）支持导入、切歌、二次确认删除、超长列表内部滚动与当前曲目高亮 |
-| 签到 | 累计与连续天数、四枚徽章、仅博主可打卡，状态本地持久化 |
+| 日常流 | 多分类筛选、全文/标题实时搜索、最新/最早/最热排序、数字分页；筛选与页码同步至 URL Query + `KeepAlive` + 滚动位置还原；空结果时展示双栏空状态 |
+| 文章详情 | 封面 Hero（缺省回退主题色）、Markdown 渲染与代码高亮、目录滚动高亮与阅读进度、悬浮返回/回顶、点赞、复制链接、上下篇 |
+| 综集 | 横向轮播（滚动吸附 + 箭头/圆点）、封面等比完整展示 + 同图模糊底衬、合集内复用日常卡片 |
+| 留言墙 | 上/左/右三面软木板，每面每批 5 张；钉满自动封存并开启新批次，可回看历史批次；访客自定义底色、字色、纸纹与墙面；右下角签名与时间戳；点击卡片 FLIP 抽取式放大预览。**数据存 MySQL**，发表走 API（限流 + Turnstile），管理员可置顶/删除 |
+| 管理面板 | 隐藏唤起（连点头像 5 次或 `Ctrl + Shift + L`）、账号密码登录、文章新建/编辑/删除/置顶/隐藏/草稿、封面上传、编辑器内 `.md` 一键解析、综集增删改、留言置顶/删除、曲库管理、UV 仪表盘、修改密码。**全部走 REST API 落库** |
+| 音乐播放器 | 内置 3 段 Web Audio 合成曲；博主可添加曲目——本地音频（上传到后端 `data/uploads`）或外链；全局曲库弹窗（Teleport）支持切歌、二次确认删除、超长列表内部滚动与当前曲目高亮 |
+| 签到 | 累计与连续天数、四枚徽章，仅博主可打卡；数据存 MySQL，按 Asia/Shanghai 时区计算 |
+| 统计 | PV/UV 存 Redis（保留 120 天），后台 14 天趋势仪表；文章浏览量累加 |
 | 404 | 跳过三栏骨架的全宽沉浸页：镂空 404 插画在视口内居中，插画下方为「返回首页 / 翻翻手记」 |
 
 ### 角色权限
 
-- **访客**：浏览公开内容、一级评论、点赞、查看日历/倒计时/签到成就、听合成音乐；看不到任何管理入口。
-- **博主**：可见隐藏与草稿内容，管理文章、置顶/删除评论与留言、盖楼回复、签到、导入导出、查看 UV。
+- **访客**：浏览公开内容、留言墙发表（受限流与人机校验约束）、点赞、查看日历/倒计时/签到成就、听音乐；看不到任何管理入口。
+- **博主**：账号密码登录后解锁后台；能编辑/发布文章与综集、管理留言墙、上传封面与音频、签到、查看 UV、修改密码。
 
 ---
-
-## 内容组织
-
-文章为 Markdown + Frontmatter，放在 `content/posts/`，构建期通过 `import.meta.glob` 打包为静态资源。示例：
-
-```markdown
----
-title: 为何我每天只放一发爆裂魔法
-subtitle: 把全部魔力押在一瞬的美学
-date: 2026-10-28
-categories:
-  - 爆裂魔法
-  - 魔法研究
-collections: explosion-theory
-cover: assets/megumin/megumin-cast.png
-excerpt: 有人问我，为什么不多放几发？
-pinned: true
----
-
-## 小标题
-
-正文……
-```
-
-支持的字段：`title` `subtitle` `date` `updated` `categories` `tags` `collections` `cover` `excerpt` `pinned` `hidden` `draft`。
-`cover` 使用相对 `public/` 的路径（如 `assets/megumin/xxx.png`），留空则渲染魔法底纹占位。
-
-综集定义在 `content/collections.json`（含 `siteStartDate`，用于「开站第 N 天」）。
-
-站点信息（站名、博主资料、社交外链、纪念日、管理员 GitHub 账号）在 `src/data/site.ts`。
-
----
-
-## 音乐播放器
-
-- 内置 3 段 Web Audio 合成曲（`src/lib/chime.ts`），不加载任何音频文件。
-- 博主登录后，播放器标题栏出现 **＋**：支持
-  1. **本地文件**：选择/拖拽 `.mp3` / `.flac` / `.wav` / `.m4a`，文件名自动作为曲名，音频写入浏览器 **IndexedDB**（`mgm-audio`），刷新后自动恢复并可直接播放；
-  2. **网络链接**：填写曲名、艺术家、封面图地址、音频直链（`https://…` 或 `assets/audio/…` 静态路径）。
-- 播放器右下角的菜单图标（`MagicIcon name="menu"`）打开 **全局曲库弹窗**：`<Teleport to="body">` 挂载，遮罩淡入 + 面板回弹浮现，不再挤在侧栏卡片内。
-- 曲库内展示全部曲目、歌手与类型标签；当前曲目高亮并在播放时显示律动条与「播放中」，打开时自动滚动到该曲目；曲目超长时列表内部滚动（`max-height: min(78vh, 700px)` + `overflow-y: auto`）。
-- 头部常驻 **导入音频**（仅博主，复用 `AddMusicModal` 的本地文件 / 外链两种模式）；每首自定义曲目右侧可删除，点击后需再点一次「确认」才真正移除，并同步清理 Pinia、`localStorage` 与 IndexedDB。
-- 访客可以播放、切歌、调音量，但看不到导入与删除入口；本地音频只存在于当前浏览器，不会上传。
 
 ## 管理入口与鉴权
 
@@ -93,101 +95,92 @@ pinned: true
 1. 连续点击左侧头像 **5 次**；
 2. 或按 `Ctrl + Shift + L`。
 
-发文流程：编辑器内可直接「导入 .md」自动解析 Frontmatter 并填充标题、日期、分类、标签与正文；封面改为本地图片选择/拖拽上传并即时预览；综集可在「综集管理」中直接新增（名称、英文副标题、简介、封面），无需改 `collections.json`。
+登录流程：账号密码 → `POST /api/auth/login` → 后端 BCrypt 校验 → 签发 JWT（7 天）并写入 Redis 白名单 → 前端存 `localStorage`（`mgm:api-token`），每次请求自动带 `Authorization: Bearer <token>`。启动时调 `/api/auth/me` 校验会话有效性。
 
-两种鉴权方式：
-
-- **GitHub PAT**：在 `src/data/site.ts` 中把 `admin.githubLogin` 设为你的 GitHub 用户名，然后在 GitHub 生成一枚带 `read:user` 权限的令牌（Token 仅存于 `sessionStorage`，关闭浏览器即失效，请求只发往 `api.github.com`）。若 `githubLogin` 留空，则任意有效令牌都会被视为博主。
-- **离线口令**：默认 `explosion`，可在 `site.admin.demoPassphrase` 修改。用于无法访问 GitHub 的场景。
-
-> 安全说明：本站无后端，鉴权只作用于前端界面层（`localStorage` 中的会话状态），无法阻止懂技术的人直接改写本地数据。它适用于个人博客的「防止误入」，不适合保护敏感信息。若需要真正的写权限控制，请把内容变更走 GitHub API/PR 或接入带服务端鉴权的 BaaS。
+- 退出登录：`POST /api/auth/logout` 删除 Redis 会话，token 立即失效。
+- 修改密码：后台「修改密码」或 `POST /api/auth/password`（旧密码 + 新密码），修改后需重新登录。
+- 密码以 BCrypt 哈希存储在 `sys_user` 表，数据库泄露也不暴露明文。
 
 ---
 
 ## 数据与持久化
 
-静态内容来自 `content/`；运行期的编辑、评论、留言、点赞、签到、访问统计均保存在浏览器 `localStorage`（前缀 `mgm:`）：
+| 数据 | 存放位置 | 说明 |
+| --- | --- | --- |
+| 文章 / 综集 / 分类 | MySQL `blog_post` 等表 | 后台发布落库，公开接口实时返回 |
+| 留言墙 | MySQL `blog_message_board` | 限流 + Turnstile + Jsoup 净化后入库 |
+| 音乐曲库 | MySQL `blog_music` | 本地音频文件在 `data/uploads` |
+| 签到记录 | MySQL `blog_checkin` | 连续天数按 Asia/Shanghai 计算 |
+| PV / UV / 限流 / JWT 会话 | Redis | UV 按天 Set 去重，保留 120 天 |
+| 博主登录态 | `localStorage`（`mgm:api-token`）+ Redis 白名单 | 双向可吊销 |
+| 构建期 Markdown 降级内容 | `content/posts/`（打进前端包） | 后端不可用时的只读兜底 |
 
-- `mgm:content`：文章的增删改覆盖层（不改动源 Markdown）
-- `mgm:comments` / `mgm:messages` / `mgm:likes` / `mgm:liked`
-- `mgm:checkin`：签到日期与累计次数
-- `mgm:uv` / `mgm:visitor-id`：访问统计（按天记录 PV/UV 与页面热度）
-- `mgm:auth`（会话内）
-
-因此「管理面板里的编辑」只对当前浏览器生效。要让改动进入仓库，请用管理面板 **导出 ZIP**（`posts/*.md` + `collections.json` + `data/*.json`），把 Markdown 覆盖回 `content/posts/` 后提交；或直接修改 Markdown。
-
-新建手记时上传的封面会在浏览器端压缩（长边 1280、WebP 0.82）后以 Base64 存入 `localStorage`，不产生服务器请求；导出 Markdown 时该 Base64 会写进 frontmatter 的 `cover` 字段。大量高清封面可能触及浏览器 5MB 存储上限，长期使用建议把图片放进 `public/assets/megumin/` 并改回相对路径。
-
-评论、留言、UV 均为本地演示级实现，未接入 Giscus / LeanCloud / Supabase。如需真实多端同步，替换 `src/stores/interaction.ts` 与 `src/stores/profile.ts` 的数据访问层即可，视图无需改动。
-
----
-
-## 部署到 GitHub Pages
-
-仓库已包含 `.github/workflows/deploy.yml`：推送到 `main` 后自动安装依赖、类型检查、构建并发布 `dist/`。
-
-1. 仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**；
-2. 推送代码即可；
-3. 路由使用 **Hash 模式**（`/#/posts`），配合相对资源路径，无需配置 404 回退，项目页与自定义域名都能直接工作。
+- 前端在 API 不可用时自动降级为只读模式（`apiReady` 判断），留言/签到/后台给出「无法连接后端」提示；本地失败的操作降级写 localStorage 以便恢复后同步。
+- 数据库 9 张表 DDL 在 `backend/src/main/resources/schema.sql`，种子文章由 `node scripts/gen-seed.mjs` 从 `content/posts/*.md` 生成（`INSERT IGNORE`，不覆盖已有数据）。
 
 ---
 
 ## 目录结构
 
 ```
-content/                  # Markdown 文章与综集定义
-public/assets/megumin/    # 从 meguminUI 切片中挑选并重命名的主题素材
+backend/                   # Spring Boot 工程（xyz.cy666.blog）
+  src/main/java/.../       # controller / service / security / mapper / entity / dto
+  src/main/resources/      # application*.yml、schema.sql、seed.sql
+  Dockerfile               # 多阶段构建（maven → temurin 17-jre）
+content/                   # Markdown 文章与综集定义（构建期降级内容源）
+deploy/
+  mysql/init/              # 容器首次启动执行的建表 + 种子 SQL
+  nginx/default.conf       # SPA + /api + /uploads 反代
+  nginx/ssl/               # 证书目录（不进仓库）
+docker-compose.yml         # mysql / redis / backend / frontend 四服务
+public/assets/megumin/    # 主题素材（WebP 压缩后）
 public/assets/textures/   # 羊皮纸 / 方格纸 / 星屑纹理与粒子贴图
-public/assets/audio/      # 可选：放置静态音频，供「网络链接」模式以相对路径引用
+scripts/gen-seed.mjs      # Markdown → seed.sql
 src/
+  api/                     # REST API 客户端（publicApi / adminApi）
   components/
     admin/                # 登录弹窗、管理面板
-    common/               # 图标、打字机、魔法阵、星火
+    common/               # 图标、打字机、星火
     layout/               # Header / Footer / 侧栏 / 背景
-    post/                 # 文章卡片、评论区
+    post/                 # 文章卡片、Turnstile 组件
     widgets/              # 博主卡、音乐播放器、日历、倒计时、目录
-  data/                   # 站点配置、种子内容加载、演示互动数据
-  lib/                    # Frontmatter、Markdown、音频合成/IndexedDB、图片压缩、导入导出、工具
-  router/
-  stores/                 # auth / content / interaction / profile / reading / ui
-  styles/                 # 设计令牌、基础样式、正文排版
-  views/                  # 首页、日常流、详情、综集、留言墙、关于、404
-meguminUI/                # 原始素材、切片与优化前大图（含原尺寸 logo，未参与构建）
+  data/                   # 站点配置、构建期内容（virtual:content）
+  lib/                    # http（axios）、Frontmatter、Markdown、导出、工具
+  router/  stores/  styles/  views/
+docs/                     # 服务端部署指南、博主身份绑定指南（旧版参考）
+meguminUI/                # 原始素材（不参与构建）
 ```
 
 ---
 
-## 视觉与动效（第二轮优化）
+## 架构变更（第五版：前后端分离）
 
-主题保持「暗黑暗红复古魔幻」，并按《网页设计优化.md》做了以下改造：
+这一版把数据层从前端/仓库整体迁移到服务端：
 
-- **移除全部魔法阵**：删除 `RuneSeal` / `BackgroundMagic` / `SparkField` 组件与所有魔法阵背景图、旋转动效；页头、页脚统一使用 `public/assets/megumin/logo.png`（已压缩到 320px / 32KB），唱片与卡片占位改为 CSS 唱片与星屑。
-- **火雨粒子**：`FireRain.vue` 用 Canvas 绘制从右上到左下（约 225°）的余烬与星屑，带渐隐、微重力加速与闪烁；全站一层，首页英雄区再叠一层，`prefers-reduced-motion` 下自动关闭。
-- **本地纹理**：`public/assets/textures/` 由 `网页设计优化.assets` 裁切压缩而来——
-  - `parchment-scroll.webp`：关于页摘句、文章结尾「手记终」；
-  - `parchment-fill.jpg`：便签纸纹、详情页底衬（低透明度叠加）；
-  - `grid-fill.jpg`：软木板底板与「方格纸」便签；
-  - `stardust.webp` / `star-*.webp`：英雄区星屑与粒子贴图。
-- **英雄区**：背景图铺满容器（`object-fit: cover` + `center`），`filter: blur(0.5px) brightness(1.12)`，暗色遮罩降到左侧 0.8 → 右侧 0.08 的方向性渐变，保留原图细节与文字可读性。
-- **手记卡片**：封面改为 `object-fit: contain` 完整展示，同图模糊底衬填补留白；移除阅读时长，元信息只保留评论与点赞。
-- **图标与播放器**：图标容器统一 `inline-flex` 居中；播放/暂停图标随状态实时切换，播放时显示律动条并旋转唱片。
-- **留言墙抽取动效**：点击卡片时用 FLIP（`getBoundingClientRect` → 居中目标 → `translate3d + rotate + scale` 补间）把卡片从钉板位置“抽出”放大，原位保留 `opacity: 0.16` 虚线幽灵占位；关闭时按同一回弹曲线缩回原位，`transitionend` 后再销毁浮层，原卡片透明度瞬间恢复。
-- 调色板：核心爆裂红 `#A52A36`、深红暗影 `#641C2B`、深渊暗黑 `#17151C`、魔法阵金 `#D9AC58`、卷轴米白 `#F4EBDD`。
-- 内置曲目用 Web Audio 实时合成三段短循环（`src/lib/chime.ts`），首屏不加载任何音频文件；只有博主添加的本地/外链曲目才在播放时读取音频源。
-- 图标为内联 SVG 组件 `MagicIcon`，无额外图标库依赖。
+- **后端**：Spring Boot 3.3 + MyBatis-Plus + MySQL 8 + Redis 7。公开接口（文章/综集/留言/签到/统计）与管理接口（`/api/admin/**`，JWT 拦截器保护）分离，统一 `ApiResponse{code,message,data}` 响应。
+- **鉴权升级**：GitHub PAT 模式改为账号密码 + JWT + Redis 会话白名单，支持即时吊销。
+- **留言墙公网化**：原本只是本机 localStorage 便签，现在正式入库，全站可见；限流与 Turnstile 防刷。
+- **上传服务化**：封面/音频上传到服务器 `data/uploads`，Nginx 直接分发，不再走 IndexedDB / base64。
+- **只读降级**：后端不可用时前台用构建期 Markdown（`content/posts/`，构建时同样物理剔除草稿）展示内容，写操作全部禁用并提示。
+- **部署**：Docker Compose 一键拉起 mysql / redis / backend / frontend(nginx)，`/actuator/health` 健康检查。
 
-## 视觉与交互（第三轮优化）
+完整的环境变量、证书申请、备份恢复、排错与安全清单：[**docs/服务端部署指南.md**](docs/服务端部署指南.md)。
 
-按《网页设计优化三.md》继续收敛细节：
+---
 
-- **空状态**：`PostsView` 的空结果容器去掉 `mage-card` 的边框与底色，改为左右双栏——左侧是镂空插画（`empty-state.webp`，240–320px，无卡片底衬，仅投影），右侧竖向排列提示文案与「清除筛选 / 回到首页」；在内容区水平垂直居中，窄屏降级为单列居中。
-- **曲库弹窗**：播放列表从侧栏内联展开改为 `Teleport` 到 body 的全局弹窗（详见「音乐播放器」），解决曲目过多撑破容器与滚动被截断的问题。
-- **沉浸式 404**：路由 `meta.bare` 让 `App.vue` 隐藏左右侧栏，`shell` 取消 `max-width`，`main` 以 `min-height: calc(100vh - header - footer)` 居中；插画自身带 404 语义，因此不再显示大标题（仅保留 `sr-only` 的 `h1` 供读屏），下方直接是「返回首页」。
-- **封面自适应**：综集卡片与首页速览的封面统一为 `object-fit: contain` + 同图模糊底衬，杜绝边缘裁切；`cover-veil` / `hero-veil` 的暗色叠加从 0.9+ 降到 0.5–0.72，并只压住底部文字区。
-- **滚动条主题化**：全局 `scrollbar-width: thin` + `scrollbar-color`，Webkit 下 7px 透明轨道、暗红半透明滑块，悬浮转暗金；右侧栏（`.right-sidebar-scroll`）收窄到 5px。
-- **素材**：新增 `empty-state.webp`（由人物插画去雾底 + 底部渐隐得到）与 `404-cutout.webp`（透明 404 插画）；`megumin-portrait.png` 转 WebP 后删除 1.7MB 原图，`public/assets` 从 2.5MB 降到 1.6MB（dist 2.7MB）。
+## 视觉与动效
 
-> 原始大图（castle-banner.png / head-seal.jpeg / magic-circle-small.png / logo.png / 404-source.webp）已压缩后接入，原图保存在 `meguminUI/originals/`，不参与构建；角色插画与 404 图统一转为 WebP（PNG 原图保留在 git 历史中）。
+主题保持「暗黑暗红复古魔幻」，历经四轮文档驱动优化：
+
+- **全局**：无魔法阵，火雨粒子（Canvas，右上→左下 225°，`prefers-reduced-motion` 自动关闭）；页头页脚用压缩后的 `logo.png`；调色板：爆裂红 `#A52A36`、深红暗影 `#641C2B`、深渊暗黑 `#17151C`、魔法阵金 `#D9AC58`、卷轴米白 `#F4EBDD`。
+- **纹理**：`public/assets/textures/`（羊皮纸 / 方格纸 / 星屑，由素材包裁切压缩）用于关于页摘句、便签纸纹、软木板与粒子贴图。
+- **英雄区**：`object-fit: cover` 铺满，`blur(0.5px) brightness(1.12)`，方向性渐变遮罩。
+- **手记卡片**：封面 `object-fit: contain` 完整展示 + 同图模糊底衬。
+- **留言墙**：FLIP 抽取式放大动效（`getBoundingClientRect` → `translate3d + rotate + scale` 补间，原位幽灵占位，`transitionend` 销毁）。
+- **空状态**：镂空插画 + 提示双栏，内容区居中。
+- **404**：路由 `meta.bare` 隐藏侧栏的全宽沉浸页。
+- **滚动条**：全局 thin + 主题色滑块。
+- **音乐**：内置曲用 Web Audio 实时合成（`src/lib/chime.ts`），首屏零音频加载；图标为内联 SVG `MagicIcon`，无图标库依赖。
 
 ## 素材
 

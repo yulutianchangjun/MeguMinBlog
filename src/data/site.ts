@@ -15,9 +15,22 @@ export const site: SiteConfig = {
       // { label: 'Mail', icon: 'mail', href: 'mailto:megumin@example.com' },
     ],
   },
-  admin: {
-    githubLogin: '',
-    demoPassphrase: 'explosion',
+  // —— 评论：giscus（GitHub Discussions），需填 repoId / categoryId ——
+  comments: {
+    repo: 'yulutianchangjun/gitHub-blog',
+    repoId: '',
+    category: 'Comments',
+    categoryId: '',
+    mapping: 'specific',
+    strict: true,
+    reactionsEnabled: true,
+    inputPosition: 'top',
+    lang: 'zh-CN',
+    theme: 'transparent_dark',
+  },
+  // —— 反机器人：Cloudflare Turnstile 站点公钥（也可用 VITE_TURNSTILE_SITE_KEY 覆盖）——
+  turnstile: {
+    siteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '',
   },
   anniversaries: [
     { label: '云汀凫的生日', date: '11-30', note: '红魔族最伟大的魔法使诞生之日' },
@@ -27,3 +40,10 @@ export const site: SiteConfig = {
   icp: '',
   startDate: '2026-11-05',
 }
+
+export const githubRepoUrl = site.comments.repo ? `https://github.com/${site.comments.repo}` : ''
+
+export const discussionsUrl = githubRepoUrl ? `${githubRepoUrl}/discussions` : ''
+
+/** giscus 是否已经配置完整 */
+export const giscusReady = Boolean(site.comments.repo && site.comments.repoId && site.comments.categoryId)

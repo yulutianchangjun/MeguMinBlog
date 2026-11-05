@@ -1,44 +1,21 @@
 import JSZip from 'jszip'
-import { stringifyFrontmatter } from './frontmatter'
-import { postFromMarkdown } from './post'
-import type { BoardMessage, Collection, Comment, Post } from '@/types'
+import { postFromMarkdown, postToMarkdown } from './post'
+import type { BoardMessage, Collection, Post } from '@/types'
 
 export interface ArchivePayload {
   posts: Post[]
   collections: Collection[]
-  comments: Comment[]
   messages: BoardMessage[]
   siteStartDate: string
 }
 
 export interface ImportResult {
   posts: Post[]
-  comments: Comment[]
   messages: BoardMessage[]
   files: number
 }
 
 const stamp = () => new Date().toISOString().slice(0, 10)
-
-export function postToMarkdown(post: Post): string {
-  return stringifyFrontmatter(
-    {
-      title: post.title,
-      subtitle: post.subtitle,
-      date: post.date,
-      updated: post.updated,
-      categories: post.categories,
-      tags: post.tags,
-      collections: post.collections,
-      cover: post.cover,
-      excerpt: post.excerpt,
-      pinned: post.pinned || undefined,
-      hidden: post.hidden || undefined,
-      draft: post.draft || undefined,
-    },
-    post.content,
-  )
-}
 
 function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
@@ -61,7 +38,6 @@ export async function exportZip(payload: ArchivePayload): Promise<void> {
     'collections.json',
     JSON.stringify({ siteStartDate: payload.siteStartDate, collections: payload.collections }, null, 2),
   )
-  zip.file('data/comments.json', JSON.stringify(payload.comments, null, 2))
   zip.file('data/messages.json', JSON.stringify(payload.messages, null, 2))
   zip.file(
     'README.md',
@@ -89,14 +65,6 @@ export function exportJson(payload: ArchivePayload): void {
   triggerDownload(blob, `megumin-blog-${stamp()}.json`)
 }
 
-function normalizeComments(input: unknown): Comment[] {
-  if (!Array.isArray(input)) return []
-  return input
-    .filter((item) => item && typeof item === 'object')
-    .map((item) => item as Comment)
-    .filter((item) => item.id && item.postId && item.content)
-}
-
 function normalizeMessages(input: unknown): BoardMessage[] {
   if (!Array.isArray(input)) return []
   return input
@@ -106,7 +74,7 @@ function normalizeMessages(input: unknown): BoardMessage[] {
 }
 
 export async function parseImportFile(file: File): Promise<ImportResult> {
-  const result: ImportResult = { posts: [], comments: [], messages: [], files: 0 }
+  const result: ImportResult = { posts: [], messages: [], files: 0 }
   const name = file.name.toLowerCase()
 
   if (name.endsWith('.zip')) {
@@ -124,8 +92,8 @@ export async function parseImportFile(file: File): Promise<ImportResult> {
         const raw = await entry.async('string')
         try {
           const data = JSON.parse(raw)
-          if (lower.includes('comments')) result.comments.push(...normalizeComments(data))
-          else if (lower.includes('messages')) result.messages.push(...normalizeMessages(data))
+          // 旧包的 comments.json 直接忽略：评论已迁移到 GitHub Discussions
+          if (lower.includes('messages')) result.messages.push(...normalizeMessages(data))
         } catch {
           /* 跳过损坏的 JSON */
         }
@@ -148,7 +116,6 @@ export async function parseImportFile(file: File): Promise<ImportResult> {
   } else if (Array.isArray(data.posts)) {
     result.posts = (data.posts as Post[]).filter((post) => post?.title)
   }
-  result.comments = normalizeComments(data.comments)
   result.messages = normalizeMessages(data.messages)
   result.files = result.posts.length ? 1 : 0
   return result

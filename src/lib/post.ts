@@ -1,4 +1,4 @@
-import { parseFrontmatter } from './frontmatter'
+import { parseFrontmatter, stringifyFrontmatter } from './frontmatter'
 import type { Post } from '@/types'
 
 function toArray(value: unknown): string[] {
@@ -43,5 +43,29 @@ export function postFromMarkdown(raw: string, fallbackId: string): Post {
     pinned: data.pinned === true || data.pinned === 'true',
     hidden: data.hidden === true || data.hidden === 'true',
     draft: data.draft === true || data.draft === 'true',
+    public: !(data.public === false || data.public === 'false'),
   }
+}
+
+/**
+ * 把 Post 写回 Markdown（用于 GitHub Contents API 提交）。
+ * 只写本项目认识的字段，避免把自动生成的 excerpt 之类的噪音塞回仓库。
+ */
+export function postToMarkdown(post: Post): string {
+  const data: Record<string, unknown> = {
+    title: post.title,
+    subtitle: post.subtitle || undefined,
+    date: post.date,
+    updated: post.updated || undefined,
+    categories: post.categories.length ? post.categories : undefined,
+    tags: post.tags.length ? post.tags : undefined,
+    collections: post.collections.length ? post.collections : undefined,
+    cover: post.cover || undefined,
+    excerpt: post.excerpt || undefined,
+    pinned: post.pinned ? true : undefined,
+    hidden: post.hidden ? true : undefined,
+    draft: post.draft ? true : undefined,
+    public: post.public === false ? false : undefined,
+  }
+  return stringifyFrontmatter(data, post.content)
 }

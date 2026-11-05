@@ -51,9 +51,10 @@ const progressToNext = computed(() => {
 
 const totalMessages = computed(() => interaction.messages.length)
 
-function checkin() {
-  const result = profile.doCheckin()
+async function checkin() {
+  const result = await profile.doCheckin()
   if (result.ok) toast.success(`签到成功 · 已连续 ${result.streak} 天`)
+  else if (result.message) toast.error(result.message)
   else toast.info('今天已经签过了，魔力回路需要休息')
 }
 

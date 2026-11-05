@@ -7,10 +7,11 @@ import ImageUploader from '@/components/admin/ImageUploader.vue'
 import { siteStartDate } from '@/data/posts'
 import { exportJson, exportZip, parseImportFile } from '@/lib/exporter'
 import { formatDate } from '@/lib/format'
+import { API_BASE, apiReady } from '@/lib/http'
 import { renderMarkdown, slugify } from '@/lib/markdown'
 import { postFromMarkdown } from '@/lib/post'
 import { resolveAsset } from '@/lib/asset'
-import { STORAGE_PREFIX, uid } from '@/lib/storage'
+import { STORAGE_PREFIX } from '@/lib/storage'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useContentStore } from '@/stores/content'
@@ -46,7 +47,7 @@ const tagText = ref('')
 const preview = ref(false)
 const saving = ref(false)
 const importing = ref(false)
-const importLog = ref<{ name: string; posts: number; comments: number; messages: number }[]>([])
+const importLog = ref<{ name: string; posts: number; messages: number }[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const mdInput = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
@@ -57,20 +58,27 @@ const totalLikes = computed(() =>
   content.allPosts.reduce((sum, post) => sum + interaction.likeTotal(post.id), 0),
 )
 
-const storageSize = computed(() => {
-  let size = 0
-  for (let i = 0; i < localStorage.length; i += 1) {
-    const key = localStorage.key(i)
-    if (!key?.startsWith(STORAGE_PREFIX)) continue
-    size += (localStorage.getItem(key)?.length ?? 0) * 2
-  }
-  return size
-})
+const apiBase = API_BASE
+const apiConfigured = apiReady
+const reloading = ref(false)
 
-const storageLabel = computed(() => {
-  const kb = storageSize.value / 1024
-  return kb > 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(1)} KB`
-})
+async function reloadAll() {
+  if (!apiConfigured) {
+    toast.warning('未配置 VITE_API_BASE_URL，当前为只读静态模式')
+    return
+  }
+  reloading.value = true
+  try {
+    await content.load()
+    await interaction.load()
+    if (auth.isAdmin) await profile.loadUv()
+    toast.success('已从后端重新拉取数据')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '拉取失败')
+  } finally {
+    reloading.value = false
+  }
+}
 
 const maxPv = computed(() => Math.max(1, ...profile.uvSeries.map((day) => day.pv)))
 
@@ -83,6 +91,9 @@ const draftCollections = computed(() => editing.value?.collections ?? [])
 function switchTab(tab: AdminTab) {
   editing.value = null
   ui.adminTab = tab
+  if (tab === 'stats' && auth.isAdmin) {
+    void profile.loadUv()
+  }
 }
 
 function today() {
@@ -134,17 +145,26 @@ function toggleFlag(flag: 'pinned' | 'hidden' | 'draft') {
   editing.value[flag] = !editing.value[flag]
 }
 
+function asciiSlug(text: string, prefix = 'post'): string {
+  const ascii = slugify(text)
+    .replace(/[^a-z0-9-]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  return ascii || `${prefix}-${Date.now().toString(36)}`
+}
+
 function uniqueId(base: string): string {
-  let id = slugify(base) || `post-${Date.now()}`
+  const stem = asciiSlug(base)
+  let id = stem
   let i = 2
   while (content.allPosts.some((post) => post.id === id) && id !== editing.value?.id) {
-    id = `${slugify(base)}-${i}`
+    id = `${stem}-${i}`
     i += 1
   }
   return id
 }
 
-function save() {
+async function save() {
   if (!editing.value) return
   if (!editing.value.title.trim()) {
     toast.warning('标题不能为空')
@@ -154,7 +174,6 @@ function save() {
     toast.warning('正文不能为空')
     return
   }
-  saving.value = true
   const payload: Post = {
     ...editing.value,
     title: editing.value.title.trim(),
@@ -166,16 +185,41 @@ function save() {
       editing.value.content.replace(/[#>*`\-\n]/g, ' ').trim().slice(0, 90),
     source: editing.value.source,
   }
-  content.savePost(payload)
-  saving.value = false
-  editing.value = null
-  toast.success(isNew.value ? '手记已创建' : '手记已保存')
-  isNew.value = false
+  saving.value = true
+  try {
+    await content.savePost(payload)
+    editing.value = null
+    if (payload.draft) {
+      toast.success('已保存为草稿：前台不可见，博主仍可在后台继续编辑')
+    } else if (payload.hidden) {
+      toast.success('已保存并隐藏：不出现在列表，直链仍可访问')
+    } else {
+      toast.success(isNew.value ? '文章已发布' : '修改已保存')
+    }
+    isNew.value = false
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '提交失败')
+  } finally {
+    saving.value = false
+  }
 }
 
-function remove(post: Post) {
-  content.deletePost(post.id)
-  toast.info(`已删除《${post.title}》`)
+async function remove(post: Post) {
+  try {
+    await content.deletePost(post)
+    toast.info(`已提交删除《${post.title}》，部署后消失`)
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '删除失败')
+  }
+}
+
+async function togglePostFlag(post: Post, flag: 'pinned' | 'hidden' | 'draft') {
+  try {
+    await content.toggleFlag(post.id, flag)
+    toast.success('已提交到 GitHub')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '提交失败')
+  }
 }
 
 async function onMdPick(event: Event) {
@@ -225,16 +269,17 @@ function editCollection(collection: Collection) {
 }
 
 function uniqueCollectionId(title: string): string {
-  let id = slugify(title) || `series-${uid()}`
+  const stem = asciiSlug(title, 'series')
+  let id = stem
   let index = 2
   while (content.collections.some((item) => item.id === id) && id !== collectionDraft.value?.id) {
-    id = `${slugify(title)}-${index}`
+    id = `${stem}-${index}`
     index += 1
   }
   return id
 }
 
-function saveCollectionDraft() {
+async function saveCollectionDraft() {
   const draft = collectionDraft.value
   if (!draft) return
   if (!draft.title.trim()) {
@@ -248,15 +293,23 @@ function saveCollectionDraft() {
     description: draft.description?.trim() ?? '',
     id: collectionIsNew.value || !draft.id ? uniqueCollectionId(draft.title) : draft.id,
   }
-  content.saveCollection(payload)
-  collectionDraft.value = null
-  collectionIsNew.value = false
-  toast.success('综集已保存')
+  try {
+    await content.saveCollection(payload)
+    collectionDraft.value = null
+    collectionIsNew.value = false
+    toast.success('综集已提交到 GitHub')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '提交失败')
+  }
 }
 
-function removeCollection(collection: Collection) {
-  content.deleteCollection(collection.id)
-  toast.info(`已删除综集《${collection.title}》`)
+async function removeCollection(collection: Collection) {
+  try {
+    await content.deleteCollection(collection.id)
+    toast.info(`已提交删除综集《${collection.title}》`)
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '删除失败')
+  }
 }
 
 function openPost(post: Post) {
@@ -268,7 +321,6 @@ async function doExportZip() {
   await exportZip({
     posts: content.allPosts,
     collections: content.collections,
-    comments: interaction.comments,
     messages: interaction.messages,
     siteStartDate,
   })
@@ -279,7 +331,6 @@ function doExportJson() {
   exportJson({
     posts: content.allPosts,
     collections: content.collections,
-    comments: interaction.comments,
     messages: interaction.messages,
     siteStartDate,
   })
@@ -292,30 +343,27 @@ async function handleFiles(files: FileList | File[]) {
   importing.value = true
   importLog.value = []
   let posts = 0
-  let comments = 0
   let messages = 0
+  let failed = false
   for (const file of list) {
     try {
       const result = await parseImportFile(file)
-      const addedPosts = content.importPosts(result.posts)
-      const addedComments = interaction.importComments(result.comments)
+      const addedPosts = await content.importPosts(result.posts)
       const addedMessages = interaction.importMessages(result.messages)
       posts += addedPosts
-      comments += addedComments
       messages += addedMessages
-      importLog.value.push({
-        name: file.name,
-        posts: addedPosts,
-        comments: addedComments,
-        messages: addedMessages,
-      })
+      importLog.value.push({ name: file.name, posts: addedPosts, messages: addedMessages })
     } catch (error) {
-      importLog.value.push({ name: `${file.name} · 解析失败`, posts: 0, comments: 0, messages: 0 })
+      failed = true
+      const reason = error instanceof Error ? error.message : '解析失败'
+      importLog.value.push({ name: `${file.name} · ${reason}`, posts: 0, messages: 0 })
     }
   }
   importing.value = false
-  if (posts || comments || messages) {
-    toast.success(`导入完成：${posts} 篇手记 / ${comments} 条评论 / ${messages} 张卡片`)
+  if (posts || messages) {
+    toast.success(`导入完成：${posts} 篇手记已提交 / ${messages} 张卡片`)
+  } else if (failed) {
+    toast.error('导入未提交任何文章，请检查登录状态与仓库权限')
   } else {
     toast.warning('没有识别到可导入的内容')
   }
@@ -333,9 +381,14 @@ function onPick(event: Event) {
   ;(event.target as HTMLInputElement).value = ''
 }
 
-function resetContent() {
-  content.resetAll()
-  toast.info('已恢复为内置文章')
+async function resetOverlay() {
+  try {
+    await content.resetOverlay()
+    await interaction.load()
+    toast.info('已重新拉取后端数据')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '刷新失败')
+  }
 }
 
 function clearAll() {
@@ -369,10 +422,13 @@ function logout() {
     <div class="admin">
       <header class="admin-head">
         <div class="head-left">
-          <span class="seal"><MagicIcon name="shield" :size="16" /></span>
+          <span class="seal">
+            <img v-if="auth.avatar" :src="auth.avatar" :alt="auth.login" />
+            <MagicIcon v-else name="shield" :size="16" />
+          </span>
           <div>
             <strong>管理面板</strong>
-            <span>{{ auth.state?.login ?? '博主' }} · {{ auth.state?.method === 'pat' ? 'GitHub 已验证' : '离线口令' }}</span>
+            <span>@{{ auth.login || '博主' }}<template v-if="auth.user"> · UID {{ auth.user.id }}</template> · GitHub 已验证</span>
           </div>
         </div>
         <div class="head-right">
@@ -480,6 +536,11 @@ function logout() {
                 </button>
               </div>
 
+              <p class="build-tip">
+                <MagicIcon name="shield" :size="11" />
+                草稿与隐藏都由后端 <code>blog_post.status</code> 控制：草稿前台完全不可见，隐藏不出现在列表但直链可访问。
+              </p>
+
               <div v-if="preview" class="preview-box">
                 <h2 class="preview-title">{{ editing.title || '无题' }}</h2>
                 <div class="prose" v-html="previewHtml"></div>
@@ -522,17 +583,17 @@ function logout() {
                 <div class="row-actions">
                   <button title="查看" @click="openPost(post)"><MagicIcon name="eye" :size="13" /></button>
                   <button title="编辑" @click="editPost(post)"><MagicIcon name="edit" :size="13" /></button>
-                  <button title="置顶" :class="{ on: post.pinned }" @click="content.toggleFlag(post.id, 'pinned')">
+                  <button title="置顶" :class="{ on: post.pinned }" @click="togglePostFlag(post, 'pinned')">
                     <MagicIcon name="pin" :size="13" />
                   </button>
-                  <button title="隐藏" :class="{ on: post.hidden }" @click="content.toggleFlag(post.id, 'hidden')">
+                  <button title="隐藏" :class="{ on: post.hidden }" @click="togglePostFlag(post, 'hidden')">
                     <MagicIcon :name="post.hidden ? 'eyeOff' : 'eye'" :size="13" />
                   </button>
                   <n-popconfirm @positive-click="remove(post)">
                     <template #trigger>
                       <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
                     </template>
-                    删除《{{ post.title }}》？删除后可通过重置恢复内置文章。
+                    删除《{{ post.title }}》？会向 GitHub 提交删除 commit，部署后从站点消失。
                   </n-popconfirm>
                 </div>
               </li>
@@ -630,7 +691,7 @@ function logout() {
             <section class="data-card">
               <span class="data-icon"><MagicIcon name="download" :size="18" /></span>
               <h3>导出全量内容</h3>
-              <p>把全部手记打包成 Markdown（含 Frontmatter），并附上评论与留言的 JSON 备份。</p>
+              <p>把全部已发布手记打包成 Markdown（含 Frontmatter），附综集与留言墙备份；评论在 GitHub，不在包里。</p>
               <div class="data-actions">
                 <button class="btn-magic small" @click="doExportZip">
                   <MagicIcon name="download" :size="13" />
@@ -646,7 +707,7 @@ function logout() {
             <section class="data-card">
               <span class="data-icon"><MagicIcon name="upload" :size="18" /></span>
               <h3>导入内容</h3>
-              <p>支持单个 / 多个 .md、标准结构 .json，以及完整 ZIP 备份。同名文章会被覆盖。</p>
+              <p>支持单个 / 多个 .md、标准结构 .json 与完整 ZIP。导入会逐篇提交到 GitHub，同名文章被覆盖。</p>
               <div
                 class="dropzone"
                 :class="{ over: dragOver }"
@@ -668,7 +729,6 @@ function logout() {
             <div v-for="(item, i) in importLog" :key="i" class="log-row">
               <span class="log-name">{{ item.name }}</span>
               <span>{{ item.posts }} 篇</span>
-              <span>{{ item.comments }} 评论</span>
               <span>{{ item.messages }} 卡片</span>
             </div>
           </section>
@@ -676,26 +736,44 @@ function logout() {
           <section class="storage">
             <div class="storage-row">
               <div>
-                <span>本地数据占用</span>
-                <strong>{{ storageLabel }}</strong>
+                <span>后端 API</span>
+                <strong>{{ apiConfigured ? apiBase : '未配置（只读静态模式）' }}</strong>
               </div>
               <div>
-                <span>存储位置</span>
-                <strong>浏览器 localStorage</strong>
+                <span>当前数据</span>
+                <strong>{{ content.allPosts.length }} 篇 · {{ content.collections.length }} 综集 · {{ interaction.messages.length }} 便签</strong>
               </div>
             </div>
+
+            <p v-if="!apiConfigured" class="repo-probe bad">
+              <MagicIcon name="lock" :size="11" />
+              未配置 VITE_API_BASE_URL：前台只读，后台保存会失败。请按 docs/服务端部署指南.md 启动后端。
+            </p>
+            <p v-else class="repo-probe">
+              <MagicIcon name="check" :size="11" />
+              {{ content.loading ? '正在与后端同步…' : '已连接后端，数据来自 MySQL；本机不再保存文章覆盖层' }}
+            </p>
+            <p v-if="content.lastAction" class="repo-probe">
+              <MagicIcon name="refresh" :size="11" />
+              最近操作：{{ content.lastAction.message }}（本次会话 {{ content.mutations }} 次）
+            </p>
+
             <div class="danger-zone">
-              <n-popconfirm @positive-click="resetContent">
+              <button class="btn-magic ghost small" :disabled="reloading" @click="reloadAll">
+                <MagicIcon name="refresh" :size="12" />
+                {{ reloading ? '同步中…' : '重新拉取数据' }}
+              </button>
+              <n-popconfirm @positive-click="resetOverlay">
                 <template #trigger>
-                  <button class="btn-magic ghost small">重置文章改动</button>
+                  <button class="btn-magic ghost small">丢弃本机会话状态</button>
                 </template>
-                将丢弃所有新建、编辑与删除，恢复内置文章。
+                重新从后端读取文章、综集与留言，不会删除数据库内容。
               </n-popconfirm>
               <n-popconfirm @positive-click="clearAll">
                 <template #trigger>
-                  <button class="btn-magic ghost small danger">清空全部本地数据</button>
+                  <button class="btn-magic ghost small danger">清空本机缓存</button>
                 </template>
-                评论、留言、签到、访客统计都会被清空，无法恢复。
+                本机点赞、访客统计与旧版缓存会被清空；MySQL 里的文章、留言不受影响。
               </n-popconfirm>
             </div>
           </section>
@@ -759,7 +837,7 @@ function logout() {
               <div class="mini-head">内容与互动</div>
               <ul class="rank">
                 <li><span class="rank-num">篇</span><span class="rank-path">公开手记</span><em>{{ content.publicPosts.length }}</em></li>
-                <li><span class="rank-num">评</span><span class="rank-path">评论总数</span><em>{{ interaction.comments.length }}</em></li>
+                <li><span class="rank-num">论</span><span class="rank-path">评论存储</span><em>GitHub</em></li>
                 <li><span class="rank-num">卡</span><span class="rank-path">留言卡片</span><em>{{ interaction.messages.length }}</em></li>
                 <li><span class="rank-num">赞</span><span class="rank-path">累计点赞</span><em>{{ totalLikes }}</em></li>
                 <li><span class="rank-num">签</span><span class="rank-path">累计签到 / 连续</span><em>{{ profile.totalDays }} / {{ profile.streak }}</em></li>
@@ -806,10 +884,17 @@ function logout() {
   height: 34px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   border-radius: 50%;
   border: 1px solid rgba(217, 172, 88, 0.4);
   background: radial-gradient(circle, rgba(165, 42, 54, 0.45), rgba(20, 15, 26, 0.9));
   color: var(--c-gold-2);
+}
+
+.seal img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .head-left strong {
@@ -1325,6 +1410,50 @@ function logout() {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--c-gold-2);
+}
+
+.storage-row strong {
+  word-break: break-all;
+}
+
+.repo-probe {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(143, 180, 155, 0.28);
+  background: rgba(143, 180, 155, 0.08);
+  font-size: 10px;
+  line-height: 1.6;
+  color: #a9d0b8;
+}
+
+.repo-probe.bad {
+  border-color: rgba(199, 60, 75, 0.35);
+  background: rgba(165, 42, 54, 0.12);
+  color: #ffc4cc;
+}
+
+.repo-probe a {
+  color: inherit;
+  border-bottom: 1px dashed currentColor;
+}
+
+.build-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 2px 0 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px dashed rgba(217, 172, 88, 0.18);
+  background: rgba(217, 172, 88, 0.04);
+  font-size: 9.5px;
+  line-height: 1.7;
+  color: var(--c-muted);
 }
 
 .danger-zone {

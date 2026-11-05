@@ -1,95 +1,58 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { seedComments, seedLikes, seedMessages } from '@/data/seed'
+import { adminApi, publicApi, type ApiMessage } from '@/api'
+import { apiReady } from '@/lib/http'
 import { readJSON, uid, writeJSON } from '@/lib/storage'
-import type { BoardMessage, BoardTexture, BoardWall, Comment } from '@/types'
+import type { BoardMessage, BoardTexture, BoardWall } from '@/types'
 
+function mapMessage(source: ApiMessage): BoardMessage {
+  return {
+    id: `m-${source.id}`,
+    remoteId: source.id,
+    author: source.author,
+    content: source.content,
+    createdAt: new Date(source.createdAt).getTime(),
+    wall: source.wall,
+    bgColor: source.bgColor,
+    fontColor: source.fontColor,
+    texture: source.texture,
+    rotation: source.rotation,
+    pinned: Boolean(source.pinned),
+  }
+}
+
+/**
+ * 互动：
+ * - 留言墙便签：配置后端后写入 MySQL；未配置时退回 localStorage（只读预览）
+ * - 点赞仍是本机行为（后端暂未建点赞表）
+ * - 文章评论走 GitHub Discussions（giscus），不在这里
+ */
 export const useInteractionStore = defineStore('interaction', () => {
-  const comments = ref<Comment[]>(readJSON<Comment[]>('comments', [...seedComments]))
-  const likes = ref<Record<string, number>>(readJSON('likes', { ...seedLikes }))
+  const likes = ref<Record<string, number>>(readJSON('likes', {}))
   const liked = ref<Record<string, boolean>>(readJSON('liked', {}))
+  const error = ref('')
+
   const normalizeTexture = (texture: string): BoardTexture =>
     texture === 'magic' ? 'stars' : (texture as BoardTexture)
 
-  const storedMessages = readJSON<BoardMessage[]>('messages', [...seedMessages]).map((message) => ({
-    ...message,
-    texture: normalizeTexture(message.texture),
-  }))
+  const messages = ref<BoardMessage[]>(
+    readJSON<BoardMessage[]>('messages', []).map((message) => ({
+      ...message,
+      texture: normalizeTexture(message.texture),
+    })),
+  )
 
-  const messages = ref<BoardMessage[]>(storedMessages)
-
-  function saveComments() {
-    writeJSON('comments', comments.value)
-  }
   function saveMessages() {
-    writeJSON('messages', messages.value)
+    if (!apiReady) writeJSON('messages', messages.value)
   }
 
-  const commentsByPost = computed(() => (postId: string) =>
-    comments.value
-      .filter((c) => c.postId === postId)
-      .sort((a, b) => {
-        if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1
-        return a.createdAt - b.createdAt
-      }),
-  )
-
-  const commentCount = computed(() => (postId: string) =>
-    comments.value.filter((c) => c.postId === postId).length,
-  )
-
-  function addComment(postId: string, author: string, content: string): Comment {
-    const comment: Comment = {
-      id: uid('c-'),
-      postId,
-      parentId: null,
-      author: author.trim() || '匿名旅人',
-      content: content.trim(),
-      createdAt: Date.now(),
-      isAdmin: false,
+  async function load(): Promise<void> {
+    if (!apiReady) return
+    try {
+      messages.value = (await publicApi.messages()).map(mapMessage)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '留言加载失败'
     }
-    comments.value = [...comments.value, comment]
-    saveComments()
-    return comment
-  }
-
-  function addReply(postId: string, parentId: string, content: string): void {
-    const parent = comments.value.find((c) => c.id === parentId)
-    const rootId = parent?.parentId ?? parentId
-    comments.value = [
-      ...comments.value,
-      {
-        id: uid('c-'),
-        postId,
-        parentId: rootId,
-        author: '惠惠',
-        isAdmin: true,
-        content: content.trim(),
-        createdAt: Date.now(),
-      },
-    ]
-    saveComments()
-  }
-
-  function toggleCommentPin(id: string): void {
-    comments.value = comments.value.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c))
-    saveComments()
-  }
-
-  function deleteComment(id: string): void {
-    const ids = new Set<string>([id])
-    let changed = true
-    while (changed) {
-      changed = false
-      for (const c of comments.value) {
-        if (c.parentId && ids.has(c.parentId) && !ids.has(c.id)) {
-          ids.add(c.id)
-          changed = true
-        }
-      }
-    }
-    comments.value = comments.value.filter((c) => !ids.has(c.id))
-    saveComments()
   }
 
   function likeTotal(postId: string): number {
@@ -111,14 +74,25 @@ export const useInteractionStore = defineStore('interaction', () => {
     writeJSON('likes', likes.value)
   }
 
-  function addMessage(payload: {
-    author: string
-    content: string
-    wall: BoardWall
-    bgColor: string
-    fontColor: string
-    texture: BoardTexture
-  }): BoardMessage {
+  const pinnedMessages = computed(() => messages.value.filter((message) => message.pinned))
+
+  async function addMessage(
+    payload: {
+      author: string
+      content: string
+      wall: BoardWall
+      bgColor: string
+      fontColor: string
+      texture: BoardTexture
+    },
+    turnstileToken = '',
+  ): Promise<BoardMessage> {
+    if (apiReady) {
+      const created = await publicApi.createMessage({ ...payload, turnstileToken })
+      const mapped = mapMessage(created)
+      messages.value = [...messages.value, mapped]
+      return mapped
+    }
     const message: BoardMessage = {
       id: uid('m-'),
       author: payload.author.trim() || '匿名旅人',
@@ -135,24 +109,24 @@ export const useInteractionStore = defineStore('interaction', () => {
     return message
   }
 
-  function toggleMessagePin(id: string): void {
+  async function toggleMessagePin(id: string): Promise<void> {
+    const message = messages.value.find((item) => item.id === id)
+    if (!message) return
+    if (apiReady && message.remoteId) {
+      await adminApi.pinMessage(message.remoteId, !message.pinned)
+    }
     messages.value = messages.value.map((m) => (m.id === id ? { ...m, pinned: !m.pinned } : m))
     saveMessages()
   }
 
-  function deleteMessage(id: string): void {
+  async function deleteMessage(id: string): Promise<void> {
+    const message = messages.value.find((item) => item.id === id)
+    if (!message) return
+    if (apiReady && message.remoteId) {
+      await adminApi.deleteMessage(message.remoteId)
+    }
     messages.value = messages.value.filter((m) => m.id !== id)
     saveMessages()
-  }
-
-  function importComments(list: Comment[]): number {
-    const ids = new Set(comments.value.map((c) => c.id))
-    const fresh = list.filter((item) => !ids.has(item.id))
-    if (fresh.length) {
-      comments.value = [...comments.value, ...fresh]
-      saveComments()
-    }
-    return fresh.length
   }
 
   function importMessages(list: BoardMessage[]): number {
@@ -166,21 +140,17 @@ export const useInteractionStore = defineStore('interaction', () => {
   }
 
   return {
-    comments,
+    likes,
     messages,
-    commentsByPost,
-    commentCount,
-    addComment,
-    addReply,
-    toggleCommentPin,
-    deleteComment,
+    pinnedMessages,
+    error,
+    load,
     likeTotal,
     hasLiked,
     toggleLike,
     addMessage,
     toggleMessagePin,
     deleteMessage,
-    importComments,
     importMessages,
   }
 })

@@ -23,8 +23,35 @@ dist-ssr
 Thumbs.db
 
 # Local visual checks
-shots
-test-results
+shots/
+test-results/
 
 # Misc
 *.tsbuildinfo
+
+# agent
+.dsh
+.workbuddy
+
+# Markdown: 除 README.md 外全部忽略
+*.md
+!README.md
+
+# 排除以 .assets 结尾的文件夹（含其内容）
+*.assets/
+
+# 排除 UI 库
+meguminUI/
+# 环境变量与运行时数据
+.env
+.env.local
+backend/target/
+data/
+deploy/nginx/ssl/*
+!deploy/nginx/ssl/.gitkeep
+
+# 需要进仓库的说明文档（*.md 默认忽略）
+!docs/
+!docs/*.md
+!技术调整.md
+!网页设计优化*.md

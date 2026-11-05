@@ -17,7 +17,6 @@ const props = withDefaults(
 const interaction = useInteractionStore()
 
 const cover = computed(() => resolveAsset(props.post.cover))
-const comments = computed(() => interaction.commentCount(props.post.id))
 const likes = computed(() => interaction.likeTotal(props.post.id))
 const day = computed(() => props.post.date.slice(5).replace('-', ' / '))
 const year = computed(() => props.post.date.slice(0, 4))
@@ -57,7 +56,6 @@ const year = computed(() => props.post.date.slice(0, 4))
       <p v-if="showExcerpt" class="excerpt">{{ post.excerpt }}</p>
 
       <div class="meta">
-        <span><MagicIcon name="comment" :size="12" />{{ comments }}</span>
         <span><MagicIcon name="heart" :size="12" />{{ likes }}</span>
         <span class="read">
           阅读

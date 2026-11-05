@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import { API_BASE, apiReady } from '@/lib/http'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
@@ -14,43 +15,31 @@ const show = computed({
   set: (value: boolean) => (value ? ui.openLogin() : ui.closeLogin()),
 })
 
-const mode = ref<'pat' | 'pass'>('pat')
-const token = ref('')
-const passphrase = ref('')
+const username = ref('')
+const password = ref('')
 
 watch(
   () => ui.loginOpen,
   (open) => {
     if (open) {
       auth.error = ''
-      token.value = ''
-      passphrase.value = ''
+      username.value = ''
+      password.value = ''
     }
   },
 )
 
-async function submitPat() {
-  if (!token.value.trim()) {
-    toast.warning('请先填入 GitHub 令牌')
+async function submit() {
+  if (!username.value.trim() || !password.value) {
+    toast.warning('请输入账号与密码')
     return
   }
-  const ok = await auth.loginWithPat(token.value)
+  const ok = await auth.loginWithPassword(username.value, password.value)
   if (ok) {
+    password.value = ''
     ui.closeLogin()
     ui.openAdmin('posts')
-    toast.success('身份已验证，欢迎回来')
-  }
-}
-
-function submitPass() {
-  if (!passphrase.value.trim()) {
-    toast.warning('口令不能为空')
-    return
-  }
-  if (auth.loginWithPassphrase(passphrase.value)) {
-    ui.closeLogin()
-    ui.openAdmin('posts')
-    toast.success('口令正确，暗门已开')
+    toast.success(`欢迎回来，${auth.user?.nickname || auth.login}`)
   }
 }
 </script>
@@ -63,63 +52,37 @@ function submitPass() {
       </button>
 
       <div class="head">
-        <span class="badge"><MagicIcon name="lock" :size="14" /></span>
-        <span class="eyebrow">Restricted · 暗门</span>
+        <span class="badge"><MagicIcon name="shield" :size="15" /></span>
+        <span class="eyebrow">Owner Only · 博主登录</span>
         <h2>推开这扇门</h2>
-        <p>只有博主可以进入。访客请继续浏览，这里没有你需要的东西。</p>
+        <p>账号由后端 <code>sys_user</code> 表管理，登录后签发 JWT 并在 Redis 维持会话白名单。</p>
       </div>
 
-      <div class="tabs">
-        <button class="tab" :class="{ active: mode === 'pat' }" @click="mode = 'pat'">
-          <MagicIcon name="github" :size="13" />
-          GitHub 令牌
-        </button>
-        <button class="tab" :class="{ active: mode === 'pass' }" @click="mode = 'pass'">
-          <MagicIcon name="wand" :size="13" />
-          离线口令
-        </button>
+      <div class="server-row" :class="{ off: !apiReady }">
+        <span>{{ apiReady ? 'API' : '未配置后端' }}</span>
+        <strong>{{ apiReady ? API_BASE : '只读静态模式' }}</strong>
       </div>
 
-      <form v-if="mode === 'pat'" class="form" @submit.prevent="submitPat">
+      <form class="form" @submit.prevent="submit">
         <label class="field">
-          <span>Personal Access Token</span>
+          <span>账号</span>
+          <input v-model="username" autocomplete="username" placeholder="admin" spellcheck="false" />
+        </label>
+        <label class="field">
+          <span>密码</span>
           <input
-            v-model="token"
+            v-model="password"
             type="password"
-            autocomplete="off"
-            placeholder="ghp_…"
-            spellcheck="false"
+            autocomplete="current-password"
+            placeholder="••••••••"
           />
         </label>
-        <p class="tip">
-          需要在 GitHub 创建一枚只读 <code>read:user</code> 权限的令牌，用于确认你是博主本人。
-          令牌不会上传到任何服务器，仅保存在本次会话中。
-        </p>
-        <p v-if="auth.error" class="error">{{ auth.error }}</p>
-        <button type="submit" class="btn-magic full" :disabled="auth.loading">
-          <MagicIcon name="shield" :size="14" />
-          {{ auth.loading ? '正在校验…' : '验证身份' }}
-        </button>
-      </form>
 
-      <form v-else class="form" @submit.prevent="submitPass">
-        <label class="field">
-          <span>暗门口令</span>
-          <input
-            v-model="passphrase"
-            type="password"
-            autocomplete="off"
-            placeholder="一句咏唱的最后一个词…"
-            spellcheck="false"
-          />
-        </label>
-        <p class="tip">
-          离线模式：当无法连接 GitHub 时使用。提示——那位魔法使每次施法结束时都会喊的那个词。
-        </p>
         <p v-if="auth.error" class="error">{{ auth.error }}</p>
-        <button type="submit" class="btn-magic full">
-          <MagicIcon name="flame" :size="14" />
-          开门
+
+        <button type="submit" class="btn-magic full" :disabled="auth.loading || !apiReady">
+          <MagicIcon name="lock" :size="14" />
+          {{ auth.loading ? '正在校验…' : '登录后台' }}
         </button>
       </form>
 
@@ -134,7 +97,7 @@ function submitPass() {
 <style scoped>
 .login-card {
   position: relative;
-  width: min(92vw, 430px);
+  width: min(92vw, 420px);
   padding: 26px 26px 18px;
   overflow: hidden;
   border-color: rgba(217, 172, 88, 0.32);
@@ -143,8 +106,6 @@ function submitPass() {
     linear-gradient(160deg, #2b2231 0%, #1b1621 52%, #141019 100%);
   box-shadow: 0 40px 80px -40px #000, 0 0 0 1px rgba(217, 172, 88, 0.08);
 }
-
-
 
 .close {
   position: absolute;
@@ -170,7 +131,7 @@ function submitPass() {
 .head {
   position: relative;
   z-index: 1;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .badge {
@@ -193,43 +154,46 @@ function submitPass() {
 
 .head p {
   margin: 0;
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.8;
   color: var(--c-muted);
 }
 
-.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 999px;
-  border: 1px solid rgba(217, 172, 88, 0.14);
-  background: rgba(14, 11, 19, 0.6);
-  margin-bottom: 16px;
+.head code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(217, 172, 88, 0.1);
+  color: var(--c-gold-2);
+}
+
+.server-row {
   position: relative;
   z-index: 1;
-}
-
-.tab {
-  flex: 1;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 7px;
-  border-radius: 999px;
-  border: 0;
-  background: transparent;
-  color: var(--c-text-2);
-  font-size: 11.5px;
-  cursor: pointer;
-  transition: all 0.24s var(--ease);
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  border: 1px dashed rgba(217, 172, 88, 0.22);
+  background: rgba(217, 172, 88, 0.05);
+  font-size: 10.5px;
+  color: var(--c-muted);
 }
 
-.tab.active {
-  color: #fff3e0;
-  background: linear-gradient(150deg, rgba(165, 42, 54, 0.8), rgba(100, 28, 43, 0.5));
-  box-shadow: inset 0 0 0 1px rgba(217, 172, 88, 0.24);
+.server-row strong {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--c-gold-2);
+  word-break: break-all;
+  text-align: right;
+}
+
+.server-row.off strong {
+  color: #ffc4cc;
 }
 
 .form {
@@ -247,9 +211,8 @@ function submitPass() {
 }
 
 .field span {
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
   color: var(--c-gold);
 }
 
@@ -261,30 +224,14 @@ function submitPass() {
   color: var(--c-text);
   font-family: var(--font-mono);
   font-size: 12.5px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   outline: none;
-  transition: all 0.24s var(--ease);
+  transition: all 0.24s var(--c-ease, ease);
 }
 
 .field input:focus {
   border-color: rgba(217, 172, 88, 0.55);
   box-shadow: 0 0 0 3px rgba(165, 42, 54, 0.16);
-}
-
-.tip {
-  margin: 0;
-  font-size: 10.5px;
-  line-height: 1.8;
-  color: var(--c-muted);
-}
-
-.tip code {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(217, 172, 88, 0.1);
-  color: var(--c-gold-2);
 }
 
 .error {

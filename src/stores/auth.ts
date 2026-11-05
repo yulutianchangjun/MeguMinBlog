@@ -1,87 +1,98 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { site } from '@/data/site'
-import { readJSON, writeJSON } from '@/lib/storage'
+import { authApi, type ApiUser } from '@/api'
+import { ApiError, apiReady, tokenStore } from '@/lib/http'
 
-interface AuthState {
-  method: 'pat' | 'passphrase' | null
-  login: string
+interface AuthUser {
+  id: number
+  username: string
+  nickname: string
+  avatar: string
   at: number
 }
 
-const SESSION_KEY = 'mgm:auth-session'
+const USER_KEY = 'mgm:api-user'
+
+function readUser(): AuthUser | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY)
+    return raw ? (JSON.parse(raw) as AuthUser) : null
+  } catch {
+    return null
+  }
+}
+
+function toAuthUser(user: ApiUser): AuthUser {
+  return {
+    id: user.id,
+    username: user.username,
+    nickname: user.nickname ?? user.username,
+    avatar: user.avatar ?? '',
+    at: Date.now(),
+  }
+}
 
 export const useAuthStore = defineStore('auth', () => {
-  const state = ref<AuthState | null>(readJSON<AuthState | null>('auth', null))
+  const user = ref<AuthUser | null>(readUser())
   const loading = ref(false)
   const error = ref('')
 
-  const isAdmin = computed(() => Boolean(state.value))
+  const token = computed(() => tokenStore.get())
+  const isAdmin = computed(() => Boolean(user.value && token.value))
+  const login = computed(() => user.value?.username ?? '')
+  const avatar = computed(() => user.value?.avatar ?? '')
 
-  function persist(next: AuthState | null) {
-    state.value = next
-    if (next) {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
-    } else {
-      sessionStorage.removeItem(SESSION_KEY)
-      writeJSON('auth', null)
-    }
-  }
-
-  // 会话级令牌：关闭浏览器即失效，避免 PAT 长期留在本地
-  const cached = sessionStorage.getItem(SESSION_KEY)
-  if (cached && !state.value) {
+  function persist(next: AuthUser | null) {
+    user.value = next
     try {
-      state.value = JSON.parse(cached) as AuthState
+      if (next) localStorage.setItem(USER_KEY, JSON.stringify(next))
+      else localStorage.removeItem(USER_KEY)
     } catch {
       /* noop */
     }
   }
 
-  async function loginWithPat(token: string): Promise<boolean> {
+  /** 账号密码登录：后端校验 sys_user 后签发 JWT，并在 Redis 里维护会话白名单 */
+  async function loginWithPassword(username: string, password: string): Promise<boolean> {
     error.value = ''
+    if (!apiReady) {
+      error.value = '未配置后端地址（VITE_API_BASE_URL），当前为只读静态模式'
+      return false
+    }
     loading.value = true
     try {
-      const res = await fetch('https://api.github.com/user', {
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-          Accept: 'application/vnd.github+json',
-        },
-      })
-      if (!res.ok) {
-        error.value = res.status === 401 ? '令牌无效或已过期（401）' : `GitHub 校验失败（${res.status}）`
-        return false
-      }
-      const user = (await res.json()) as { login?: string }
-      const login = user.login ?? ''
-      const expected = site.admin.githubLogin.trim()
-      if (expected && login.toLowerCase() !== expected.toLowerCase()) {
-        error.value = `该令牌属于 @${login}，不是本站博主账号`
-        return false
-      }
-      persist({ method: 'pat', login, at: Date.now() })
+      const result = await authApi.login(username.trim(), password)
+      tokenStore.set(result.token)
+      persist(toAuthUser(result.user))
       return true
-    } catch {
-      error.value = '无法连接 GitHub（网络受限时可使用离线口令）'
+    } catch (err) {
+      error.value = err instanceof ApiError ? err.message : '登录失败，请稍后重试'
       return false
     } finally {
       loading.value = false
     }
   }
 
-  function loginWithPassphrase(passphrase: string): boolean {
-    error.value = ''
-    if (passphrase.trim() === site.admin.demoPassphrase) {
-      persist({ method: 'passphrase', login: site.author.name, at: Date.now() })
-      return true
+  /** 刷新页面后用 Redis 中的会话校验令牌是否仍然有效 */
+  async function restore(): Promise<void> {
+    if (!apiReady || !tokenStore.get()) return
+    try {
+      const me = await authApi.me()
+      persist({ ...toAuthUser(me), at: user.value?.at ?? Date.now() })
+    } catch {
+      tokenStore.clear()
+      persist(null)
     }
-    error.value = '口令不对。提示：一句咏唱的最后一个词。'
-    return false
   }
 
   function logout() {
+    if (apiReady && tokenStore.get()) {
+      void authApi.logout().catch(() => undefined)
+    }
+    tokenStore.clear()
     persist(null)
+    error.value = ''
   }
 
-  return { state, isAdmin, loading, error, loginWithPat, loginWithPassphrase, logout }
+  return { user, login, avatar, isAdmin, loading, error, token, loginWithPassword, restore, logout }
 })

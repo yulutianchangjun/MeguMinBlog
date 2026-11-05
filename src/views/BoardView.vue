@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import TurnstileWidget from '@/components/post/TurnstileWidget.vue'
+import { discussionsUrl, site } from '@/data/site'
 import { formatDate } from '@/lib/format'
+import { apiReady } from '@/lib/http'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/auth'
 import { useInteractionStore } from '@/stores/interaction'
@@ -26,6 +29,13 @@ let finished = true
 const batches = ref(1)
 const composing = ref(false)
 const activeWall = ref<BoardWall>('top')
+const siteKey = site.turnstile.siteKey
+const cfToken = ref('')
+const turnstile = ref<InstanceType<typeof TurnstileWidget> | null>(null)
+
+function onVerified(token: string) {
+  cfToken.value = token
+}
 
 const form = ref({
   author: localStorage.getItem('mgm:board-name') ?? '',
@@ -218,7 +228,7 @@ function openComposer(wall: BoardWall = 'top') {
   activeWall.value = form.value.wall
 }
 
-function submit() {
+async function submit() {
   if (!form.value.content.trim()) {
     toast.warning('卡片上还什么都没写')
     return
@@ -231,32 +241,54 @@ function submit() {
     toast.warning('卡片空间有限，请控制在 160 字以内')
     return
   }
+  if (siteKey && !cfToken.value) {
+    toast.warning('请先完成人机校验')
+    return
+  }
   localStorage.setItem('mgm:board-name', form.value.author.trim())
   const targetWall = wallAvailable(form.value.wall) ? form.value.wall : (walls.find((w) => wallAvailable(w.key))?.key ?? 'top')
 
-  interaction.addMessage({
-    author: form.value.author,
-    content: form.value.content,
-    wall: targetWall,
-    bgColor: form.value.bgColor,
-    fontColor: form.value.fontColor,
-    texture: form.value.texture,
-  })
+  try {
+    await interaction.addMessage(
+      {
+        author: form.value.author,
+        content: form.value.content,
+        wall: targetWall,
+        bgColor: form.value.bgColor,
+        fontColor: form.value.fontColor,
+        texture: form.value.texture,
+      },
+      cfToken.value,
+    )
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '留言提交失败')
+    return
+  }
 
   batches.value = Math.max(totalBatches.value, liveBatch.value)
   form.value.content = ''
   composing.value = false
-  toast.success('卡片已经钉上墙了')
+  cfToken.value = ''
+  turnstile.value?.reset()
+  toast.success(apiReady ? '卡片已经钉上墙了' : '卡片已钉在本机（未连接后端）')
 }
 
-function togglePin(message: BoardMessage) {
-  interaction.toggleMessagePin(message.id)
+async function togglePin(message: BoardMessage) {
+  try {
+    await interaction.toggleMessagePin(message.id)
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '操作失败')
+  }
 }
 
-function remove(message: BoardMessage) {
-  interaction.deleteMessage(message.id)
-  if (batches.value > totalBatches.value) batches.value = totalBatches.value
-  toast.info('卡片已取下')
+async function remove(message: BoardMessage) {
+  try {
+    await interaction.deleteMessage(message.id)
+    if (batches.value > totalBatches.value) batches.value = totalBatches.value
+    toast.info('卡片已取下')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '取下失败')
+  }
 }
 
 function goBatch(next: number) {
@@ -282,6 +314,17 @@ onMounted(() => {
           三面墙，每面一次只钉 5 张。钉满之后这一批会封存进档案，新的卡片重新开始——
           后浪覆前浪，但旧的字不会消失。
         </p>
+        <div class="head-links">
+          <a :href="discussionsUrl" target="_blank" rel="noopener noreferrer" class="public-link">
+            <MagicIcon name="github" :size="12" />
+            公开留言 · GitHub Discussions
+            <MagicIcon name="external" :size="10" />
+          </a>
+          <span class="local-hint">
+            <MagicIcon name="lock" :size="10" />
+            三面软木板是本机便签，只存在当前浏览器
+          </span>
+        </div>
       </div>
       <div class="head-stats">
         <div><strong>{{ totalCards }}</strong><span>张卡片</span></div>
@@ -467,10 +510,21 @@ onMounted(() => {
                 </div>
               </div>
 
+              <TurnstileWidget
+                v-if="siteKey"
+                ref="turnstile"
+                :site-key="siteKey"
+                @verified="onVerified"
+              />
+
               <button class="btn-magic full" @click="submit">
                 <MagicIcon name="pin" :size="14" />
                 钉上去
               </button>
+              <p class="hint">
+                <MagicIcon name="lock" :size="10" />
+                {{ apiReady ? '留言免登录，凭昵称发表；同一 IP 每分钟 1 条、每小时 5 条' : '未连接后端，便签只存在这台设备' }}
+              </p>
             </div>
 
             <div v-else key="info" class="board-info">
@@ -510,6 +564,10 @@ onMounted(() => {
                 <MagicIcon name="lock" :size="10" />
                 置顶与取下仅博主可用
               </p>
+              <a :href="discussionsUrl" target="_blank" rel="noopener noreferrer" class="hint public">
+                <MagicIcon name="github" :size="10" />
+                想让所有人看到？去 GitHub Discussions 留言
+              </a>
             </div>
           </transition>
         </div>
@@ -633,6 +691,41 @@ onMounted(() => {
   gap: 24px;
   position: relative;
   overflow: hidden;
+}
+
+.head-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.public-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 172, 88, 0.3);
+  background: rgba(165, 42, 54, 0.16);
+  color: var(--c-gold-2);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  transition: all 0.22s var(--ease);
+}
+
+.public-link:hover {
+  border-color: rgba(242, 219, 166, 0.6);
+  background: rgba(165, 42, 54, 0.3);
+}
+
+.local-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  color: var(--c-muted);
 }
 
 .head::after {
@@ -1168,6 +1261,15 @@ onMounted(() => {
 
 .dots i.on {
   background: linear-gradient(90deg, #a52a36, #d9ac58);
+}
+
+.hint.public {
+  color: var(--c-gold-dim);
+  text-decoration: none;
+}
+
+.hint.public:hover {
+  color: var(--c-gold-2);
 }
 
 .info-rules {
