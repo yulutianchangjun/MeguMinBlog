@@ -33,9 +33,17 @@ test-results/
 .dsh
 .workbuddy
 
-# Markdown: 除 README.md 外全部忽略
+# 上传的运行时文件与传输包
+backend/uploads/
+*.tgz
+
+# 个人内容备份（开源版不跟踪）
+content/posts.personal/
+
+# Markdown: 除 README.md 与示例文章外全部忽略（个人文章不入库）
 *.md
 !README.md
+!content/posts/*.md
 
 
 # 排除 UI 库

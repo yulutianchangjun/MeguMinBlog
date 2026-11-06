@@ -1,4 +1,4 @@
--- cy-666.xyz 博客数据库结构（MySQL 8.0 / utf8mb4）
+-- Megumin Blog 博客数据库结构（MySQL 8.0 / utf8mb4）
 CREATE TABLE IF NOT EXISTS sys_user (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   username VARCHAR(64) NOT NULL,

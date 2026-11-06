@@ -75,7 +75,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (32+ chars) in .env}
       TURNSTILE_ENABLED: ${TURNSTILE_ENABLED:-true}
       TURNSTILE_SECRET: ${TURNSTILE_SECRET:-}
-      CORS_ORIGINS: https://cy-666.xyz,https://www.cy-666.xyz
+      CORS_ORIGINS: https://your-domain.com,https://www.your-domain.com
       UPLOAD_DIR: /app/uploads
       TZ: Asia/Shanghai
       JAVA_OPTS: -Xms64m -Xmx280m

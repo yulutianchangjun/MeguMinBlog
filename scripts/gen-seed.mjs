@@ -205,9 +205,8 @@ lines.push(
   `INSERT IGNORE INTO blog_config (config_key, config_value) VALUES ('site.start-date', ${q(siteStartDate)});`,
 )
 const anniversaries = [
-  { id: 1, label: '云汀凫的生日', date: '11-30', note: '红魔族最伟大的魔法使诞生之日', sort: 0 },
-  { id: 2, label: '学会爆裂魔法纪念日', date: '06-15', note: '第一次把山丘夷为平地', sort: 1 },
-  { id: 3, label: '博客开站周年', date: '11-05', note: '手记的第一页', sort: 2 },
+  { id: 1, label: '示例纪念日', date: '01-01', note: '在后台「站点设置」里改成你自己的纪念日', sort: 0 },
+  { id: 2, label: '博客开站周年', date: '01-01', note: '与站点设置中的开站日期一致即可', sort: 1 },
 ]
 for (const item of anniversaries) {
   lines.push(

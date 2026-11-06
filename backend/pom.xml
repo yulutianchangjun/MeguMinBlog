@@ -15,7 +15,7 @@
   <artifactId>blog-backend</artifactId>
   <version>1.0.0</version>
   <name>blog-backend</name>
-  <description>cy-666.xyz 博客后端</description>
+  <description>Megumin Blog 博客后端（Spring Boot + MyBatis-Plus + MySQL + Redis）</description>
 
   <properties>
     <java.version>17</java.version>

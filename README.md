@@ -1,191 +1,398 @@
-# 爆裂魔法使的手记 · Megumin Blog
+# Megumin Blog · 爆裂魔法使的手记
 
-一个以「爆裂魔法」为核心概念的暗黑复古魔幻风个人博客。**前后端分离架构**：Vue 3 + TypeScript + Vite + Pinia 前端，Spring Boot 3 + MySQL 8 + Redis 7 后端，Docker Compose + Nginx 一键部署。
+> 一个开箱即用的前后端分离个人博客系统。暗黑复古魔幻风 UI，文章 / 综集 / 留言墙 / 音乐播放器 / 签到 / 统计全套功能，自带管理后台，一条 `docker compose up` 即可上线。
 
-视觉素材取自仓库内 `meguminUI/slices/`（惠惠主题 UI 素材切片），调色板与布局按《个人博客系统架构与需求设计说明书》实现。
-
-> 本版（第五版）由 GitOps 纯静态方案切换为服务端方案，**前端不保留任何静态内容数据**：文章、综集、曲库、签到、UV、纪念日、开站日期全部实时来自 REST API；后端不可用时前台显示空态与「无法连接后端」提示。完整部署步骤见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
+**Vue 3 + TypeScript + Vite + Pinia** 前端 · **Spring Boot 3 + MyBatis-Plus + MySQL 8 + Redis 7** 后端 · **Docker Compose + Nginx** 部署
 
 ---
 
-## 快速开始
+## 目录
+
+- [这个项目是什么](#这个项目是什么)
+- [功能特性](#功能特性)
+- [技术组成](#技术组成)
+- [系统架构](#系统架构)
+- [目录结构](#目录结构)
+- [数据库结构](#数据库结构)
+- [快速开始](#快速开始)
+- [创建博主账号](#创建博主账号)
+- [导入示例数据](#导入示例数据)
+- [Docker Compose 部署](#docker-compose-部署)
+- [个性化配置](#个性化配置)
+- [管理后台](#管理后台)
+- [API 一览](#api-一览)
+- [开源协议](#开源协议)
+
+---
+
+## 这个项目是什么
+
+一个完整的个人博客系统，不是静态站点生成器，也不是博客主题。
+
+- **内容全部存数据库**：文章、综集、留言、评论、曲库、签到、纪念日都由 REST API 实时提供，改一处即全站生效，无需重新构建。
+- **自带管理后台**：登录后可写文章（Markdown 编辑器 + 实时预览）、传封面、管理留言与评论、维护曲库、看 PV/UV 趋势，全程无需碰代码。
+- **一套代码可复刻**：前端零静态内容兜底，站点标题、博主资料、配色、纪念日都在少数几个位置，换掉就是你的博客。
+- **默认安全**：不内置任何账号密码，JWT + Redis 会话白名单、接口限流、XSS 净化、人机校验开箱可用。
+
+适合：想拥有一个独立博客、又不想依赖第三方平台托管内容与评论的人。
+
+---
+
+## 功能特性
+
+| 模块 | 说明 |
+| --- | --- |
+| **首页** | 打字机欢迎语、火雨与星屑粒子背景、近期精选、置顶留言、签到成就、综集速览 |
+| **日常流** | 分类筛选、全文搜索、最新/最早/最热排序、分页；筛选状态同步 URL，返回时保留滚动位置 |
+| **文章详情** | Markdown 渲染 + 代码高亮、目录滚动高亮、阅读进度、点赞、复制链接、上下篇、本站评论区 |
+| **综集** | 把系列文章归入同一综集，横向轮播 + 封面模糊底衬 |
+| **留言墙** | 三面软木板，钉满自动封存开新批次，可回看历史；自定义底色/字色/纸纹；点击 FLIP 抽取放大 |
+| **音乐播放器** | 全局播放器 + 曲库弹窗；支持上传音频或外链，内置 3 首 Web Audio 实时合成曲（零音频资源） |
+| **签到 / 统计** | 博主打卡与徽章、连续天数；PV/UV 存 Redis，后台 14 天趋势图与热门页面 Top5 |
+| **管理后台** | 文章、综集、评论、留言、曲库、站点设置（开站日期 + 纪念日）、UV 仪表盘、改密码 |
+| **请求进度条** | 顶部 10px 主题色进度条响应所有 API 请求，上传显示真实进度，失败变警示红 |
+
+**角色权限**：访客可浏览、评论、留言、点赞、听歌；博主登录后解锁后台全部权限。管理入口不常驻页面——**连点左侧头像 5 次**或按 `Ctrl + Shift + L` 唤起。
+
+---
+
+## 技术组成
 
 ### 前端
 
-```bash
-npm install
-npm run dev        # 本地开发 http://localhost:5173，读取 .env.development
-npm run build      # 生产构建，输出 dist/
-npm run preview    # 预览构建产物
-npm run typecheck  # vue-tsc 类型检查
-```
-
-Node 版本建议 20+。`.env.development` 默认 `VITE_API_BASE_URL=http://localhost:8080/api`。
+| 项 | 选型 |
+| --- | --- |
+| 框架 | Vue 3（`<script setup>` + TypeScript） |
+| 构建 | Vite 6 |
+| 状态 | Pinia |
+| 路由 | Vue Router（Hash 模式） |
+| UI 组件 | Naive UI（按需引入） |
+| 请求 | axios（统一拦截器：注入 token、全局进度条） |
+| 内容渲染 | markdown-it + highlight.js |
+| 样式 | 原生 CSS 变量主题（`src/styles/tokens.css`） |
 
 ### 后端
 
-```bash
-# 准备 MySQL 8（建库 blog_db，utf8mb4_unicode_ci）与 Redis 7
-cd backend
-mvn -DskipTests package
-MYSQL_PASSWORD=你的密码 java -jar target/app.jar
-```
-
-`dev` profile 启动时只自动建表（`CREATE TABLE IF NOT EXISTS`，幂等），**不插入任何数据**：初始内容用 `mysql < backend/src/main/resources/seed.sql` 手工导入（可选）；博主账号由本人执行 `node scripts/hash-password.mjs` 生成 BCrypt 哈希后手工插入 `sys_user`（数据库只存哈希，代码里没有默认账号）。详见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
-
-### Docker Compose（生产）
-
-```bash
-cp .env.example .env    # 填 MYSQL_ROOT_PASSWORD / REDIS_PASSWORD / JWT_SECRET（博主账号手工插库，不走 env）
-npm ci && npm run build
-docker compose up -d --build
-```
-
-详见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
-
----
-
-## 架构总览
-
-```
-Internet (HTTPS 443)
-        │
-        ▼
-   Nginx (frontend 容器)
-   ├── /            → Vue 3 SPA（dist/，try_files 回退 index.html）
-   ├── /uploads/    → 上传的封面 / 音频（宿主机 data/uploads）
-   └── /api/        → Spring Boot :8080 (backend 容器)
-                         ├── MySQL 8（文章、综集、留言、音乐、签到、纪念日、站点配置）
-                         └── Redis 7（JWT 会话、限流、PV/UV）
-```
-
-- **鉴权**：账号密码登录 → BCrypt 校验 → JWT（HS256，7 天）→ Redis 白名单；退出登录即删除会话，旧 token 立即失效。
-- **防刷**：Redis 分钟/小时双窗口限流（同 IP 每分钟 1 条、每小时 5 条留言）+ Cloudflare Turnstile 服务端校验 + Jsoup 文本净化。
-- **上传**：图片 8MB / 音频 30MB，UUID 文件名落盘 `data/uploads`，经 Nginx `/uploads/` 对外提供。
-
----
-
-## 功能一览
-
-| 模块 | 已实现 |
+| 项 | 选型 |
 | --- | --- |
-| 全局布局 | Header（LOGO / 导航 / 操作区）、左侧博主卡 + 音乐播放器、右侧日历 + 纪念日倒计时、Footer；响应式单列降级 |
-| 纪念日倒计时 | 开站日期与纪念日列表来自 `GET /api/site`，后台「站点设置」可增删改与调整排序；日历同步标记纪念日 |
-| 首页 | 打字机欢迎语、火雨与星屑粒子、近期精选、置顶留言走马灯、签到成就看板、综集速览 |
-| 日常流 | 多分类筛选、全文/标题实时搜索、最新/最早/最热排序、数字分页；筛选与页码同步至 URL Query + `KeepAlive` + 滚动位置还原；空结果时展示双栏空状态 |
-| 文章详情 | 封面 Hero（缺省回退主题色）、Markdown 渲染与代码高亮、目录滚动高亮与阅读进度、悬浮返回/回顶、点赞、复制链接、上下篇；**本站评论区**（昵称 + 内容，数据存 MySQL `blog_comment`，限流 + Turnstile + Jsoup 净化，楼层式展示） |
-| 综集 | 横向轮播（滚动吸附 + 箭头/圆点）、封面等比完整展示 + 同图模糊底衬、合集内复用日常卡片 |
-| 留言墙 | 上/左/右三面软木板，每面每批 5 张；钉满自动封存并开启新批次，可回看历史批次；访客自定义底色、字色、纸纹与墙面；右下角签名与时间戳；点击卡片 FLIP 抽取式放大预览。**数据存 MySQL**，发表走 API（限流 + Turnstile），管理员可置顶/删除 |
-| 管理面板 | 隐藏唤起（连点头像 5 次或 `Ctrl + Shift + L`）、账号密码登录、文章新建/编辑/删除/置顶/隐藏/草稿、封面上传（本地压缩 WebP 后上传服务器）、编辑器内 `.md` 一键解析、综集增删改、评论管理、站点设置（开站日期 + 纪念日 CRUD）、留言置顶/删除、曲库管理、UV 仪表盘、修改密码。**全部走 REST API 落库** |
-| 音乐播放器 | 曲库完全来自后端 `GET /api/music`（含 3 段内置 Web Audio 合成曲，曲谱引擎在前端、曲目列表存数据库）；博主可添加曲目——本地音频上传到后端 `data/uploads` 或填写外链；全局曲库弹窗（Teleport）支持切歌、二次确认删除、超长列表内部滚动与当前曲目高亮 |
-| 签到 | 累计与连续天数、四枚徽章，仅博主可打卡；数据存 MySQL，按 Asia/Shanghai 时区计算 |
-| 统计 | PV/UV 存 Redis（保留 120 天 + 热门页面 Top5），后台 14 天趋势仪表；文章浏览量累加；浏览踪迹仅上报后端，不在本机留存 |
-| 404 | 跳过三栏骨架的全宽沉浸页：镂空 404 插画在视口内居中，插画下方为「返回首页 / 翻翻手记」 |
+| 框架 | Spring Boot 3.3（Java 17） |
+| ORM | MyBatis-Plus |
+| 数据库 | MySQL 8（utf8mb4） |
+| 缓存 | Redis 7（会话白名单、限流、PV/UV） |
+| 鉴权 | JWT（HS256，7 天）+ BCrypt 密码哈希 |
+| 安全 | Jsoup 文本净化、接口限流、Cloudflare Turnstile（可选） |
+| 上传 | 图片 8MB / 音频 30MB，UUID 命名落盘 |
 
-### 角色权限
+### 部署
 
-- **访客**：浏览公开内容、文章评论与留言墙发表（受限流与人机校验约束）、点赞、查看日历/倒计时/签到成就、听音乐；看不到任何管理入口。
-- **博主**：账号密码登录后解锁后台；能编辑/发布文章与综集、管理评论与留言墙、上传封面与音频、签到、查看 UV、修改密码。
+- **开发**：Vite dev server `:5173` + Spring Boot `:8080`
+- **生产（推荐）**：Docker Compose 四服务（mysql / redis / backend / nginx），Nginx 同时托管 SPA、反代 API、分发上传文件
+- **单机小内存（≤2G）**：宿主机 nginx + 三容器（见 [部署指南第 11 章](docs/服务端部署指南.md)）
 
 ---
 
-## 管理入口与鉴权
+## 系统架构
 
-页面不常驻登录按钮。唤起方式：
+```
+                        ┌─────────────────────────────┐
+   Browser  ──HTTPS──▶  │  Nginx (frontend 容器)       │
+                        │  ├─ /          Vue 3 SPA     │
+                        │  ├─ /assets/   长缓存静态资源  │
+                        │  ├─ /uploads/  封面与音频      │
+                        │  └─ /api/  ──▶ Spring Boot   │
+                        └─────────────────────────────┘
+                                        │
+                          ┌─────────────┴─────────────┐
+                          ▼                           ▼
+                    MySQL 8                     Redis 7
+              内容、评论、留言、曲库        会话、限流、PV/UV
+```
 
-1. 连续点击左侧头像 **5 次**；
-2. 或按 `Ctrl + Shift + L`。
-
-登录流程：账号密码 → `POST /api/auth/login` → 后端 BCrypt 校验 → 签发 JWT（7 天）并写入 Redis 白名单 → 前端存 `localStorage`（`mgm:api-token`），每次请求自动带 `Authorization: Bearer <token>`。启动时调 `/api/auth/me` 校验会话有效性。
-
-- 退出登录：`POST /api/auth/logout` 删除 Redis 会话，token 立即失效。
-- 修改密码：后台「修改密码」或 `POST /api/auth/password`（旧密码 + 新密码），修改后需重新登录。
-- 密码以 BCrypt 哈希存储在 `sys_user` 表，数据库泄露也不暴露明文。
-
----
-
-## 数据与持久化
-
-| 数据 | 存放位置 | 说明 |
-| --- | --- | --- |
-| 文章 / 综集 / 分类 | MySQL `blog_post` 等表 | 后台发布落库，公开接口实时返回 |
-| 留言墙 | MySQL `blog_message_board` | 限流 + Turnstile + Jsoup 净化后入库 |
-| 文章评论 | MySQL `blog_comment` | 同 IP 每分钟 1 条 / 每小时 10 条，楼层式展示 |
-| 音乐曲库 | MySQL `blog_music` | 内置合成曲与上传曲目都在库里；音频文件在 `data/uploads` |
-| 签到记录 | MySQL `blog_checkin` | 连续天数按 Asia/Shanghai 计算 |
-| 纪念日 / 开站日期 | MySQL `blog_anniversary` / `blog_config` | `GET /api/site` 下发，后台「站点设置」管理 |
-| PV / UV / 热门页面 / 限流 / JWT 会话 | Redis | UV 按天 Set 去重（保留 120 天），页面计数 Hash Top5 |
-| 博主登录态 | `localStorage`（`mgm:api-token`）+ Redis 白名单 | 双向可吊销 |
-| 点赞 / 播放器音量偏好 | `localStorage`（`mgm:` 前缀） | 访客侧轻量状态，不属于内容数据 |
-
-- 前端**没有任何静态内容兜底**：数据库种子 `seed.sql` 由 `node scripts/gen-seed.mjs` 从 `content/posts/*.md` 生成（`INSERT IGNORE`，不覆盖已有数据），`content/` 只作为种子来源，不再参与前端构建。
-- 数据库 12 张表 DDL 在 `backend/src/main/resources/schema.sql`（文章 4 张、综集 2 张、留言 1 张、评论 1 张、音乐 1 张、签到 1 张、纪念日 1 张、站点配置 1 张 + 用户表）。
+- **鉴权链路**：登录 → BCrypt 校验 → 签发 JWT → 写入 Redis 白名单。退出登录即删除会话，旧 token 立刻失效。
+- **接口分层**：`/api/**` 公开只读 + 访客写入；`/api/admin/**` 由拦截器强制校验 JWT。
+- **统一响应**：`{ code, message, data }`，`code = 0` 表示成功。
 
 ---
 
 ## 目录结构
 
 ```
-backend/                   # Spring Boot 工程（xyz.cy666.blog）
-  src/main/java/.../       # controller / service / security / mapper / entity / dto
-  src/main/resources/      # application*.yml、schema.sql、seed.sql
-  Dockerfile               # 多阶段构建（maven → temurin 17-jre）
-content/                   # Markdown 文章与综集定义（数据库种子的来源，不参与前端构建）
-deploy/
-  mysql/init/              # 容器首次启动只执行建表 SQL（01-schema.sql），不灌数据
-  nginx/default.conf       # SPA + /api + /uploads 反代
-  nginx/ssl/               # 证书目录（不进仓库）
-docker-compose.yml         # mysql / redis / backend / frontend 四服务
-public/assets/megumin/    # 主题素材（WebP 压缩后）
-public/assets/textures/   # 羊皮纸 / 方格纸 / 星屑纹理与粒子贴图
-scripts/gen-seed.mjs      # Markdown → seed.sql（含站点/纪念日/合成曲种子）
-src/
-  api/                     # REST API 客户端（publicApi / adminApi）
-  components/
-    admin/                # 登录弹窗、管理面板
-    common/               # 图标、打字机、星火
-    layout/               # Header / Footer / 侧栏 / 背景
-    post/                 # 文章卡片、Turnstile 组件
-    widgets/              # 博主卡、音乐播放器、日历、倒计时、目录
-  data/                   # 站点品牌配置（标题/博主资料/社交链接）
-  lib/                    # http（axios）、Markdown、导出、工具
-  router/  stores/  styles/  views/
-docs/                     # 服务端部署指南、博主身份绑定指南（旧版参考）
-meguminUI/                # 原始素材（不参与构建）
+├── src/                        # 前端
+│   ├── api/                    # REST 客户端（publicApi / adminApi）
+│   ├── components/
+│   │   ├── admin/              # 管理面板、登录弹窗、上传器
+│   │   ├── layout/             # Header / Footer / 侧栏 / 背景粒子
+│   │   ├── post/               # 文章卡片、评论区、目录
+│   │   └── widgets/            # 博主卡、播放器、日历、倒计时
+│   ├── data/site.ts            # ★ 站点标题与博主资料（改成你的）
+│   ├── lib/                    # http、Markdown、图片压缩、进度条
+│   ├── router/ stores/ styles/ views/
+│   └── main.ts
+├── backend/                    # 后端（包 xyz.cy666.blog）
+│   ├── src/main/java/.../      # controller / service / mapper / entity / dto / security
+│   └── src/main/resources/
+│       ├── application*.yml    # dev / prod 配置
+│       ├── schema.sql          # ★ 12 张表 DDL（启动自动建表）
+│       └── seed.sql            # 示例种子数据（手工导入）
+├── content/                    # 种子内容来源
+│   ├── posts/*.md              # 示例文章（带 frontmatter）
+│   └── collections.json        # 综集与开站日期
+├── deploy/
+│   ├── mysql/init/01-schema.sql
+│   ├── nginx/default.conf      # 容器内 nginx
+│   ├── nginx/blog.server.conf  # 宿主机 nginx 生产参考
+│   └── docker-compose.server.yml
+├── docs/服务端部署指南.md        # 完整部署、证书、备份、排错
+├── scripts/gen-seed.mjs        # Markdown → seed.sql 生成器
+├── scripts/hash-password.mjs   # 生成 BCrypt 密码哈希
+└── docker-compose.yml          # 四服务一键启动
 ```
 
 ---
 
-## 架构变更（第五版：前后端分离）
+## 数据库结构
 
-这一版把数据层从前端/仓库整体迁移到服务端：
+12 张表，全部 `InnoDB` / `utf8mb4_unicode_ci`，DDL 见 [`backend/src/main/resources/schema.sql`](backend/src/main/resources/schema.sql)。后端启动时以 `CREATE TABLE IF NOT EXISTS` 自动建表（幂等），**不会插入任何数据**。
 
-- **后端**：Spring Boot 3.3 + MyBatis-Plus + MySQL 8 + Redis 7。公开接口（文章/综集/留言/签到/统计/站点信息）与管理接口（`/api/admin/**`，JWT 拦截器保护）分离，统一 `ApiResponse{code,message,data}` 响应。
-- **鉴权升级**：GitHub PAT 模式改为账号密码 + JWT + Redis 会话白名单，支持即时吊销。
-- **留言墙公网化**：原本只是本机 localStorage 便签，现在正式入库，全站可见；限流与 Turnstile 防刷。
-- **上传服务化**：封面/音频上传到服务器 `data/uploads`，Nginx 直接分发，不再走 IndexedDB / base64。
-- **零静态数据**：删除构建期 Markdown 虚拟模块（`virtual:content`）、本地签到/UV 踪迹、本地曲库与 IndexedDB 音频、静态纪念日配置——文章、日常、踪迹、签到记录、纪念日倒计时、开站日期、曲库全部实时来自后端；localStorage 只保留登录 token、点赞与播放器偏好。
-- **站点设置后台化**：新增 `blog_anniversary` / `blog_config` 表与 `GET /api/site`，后台「站点设置」tab 直接管理开站日期与纪念日。
-- **部署**：Docker Compose 一键拉起 mysql / redis / backend / frontend(nginx)，`/actuator/health` 健康检查。
+### 表一览
 
-完整的环境变量、证书申请、备份恢复、排错与安全清单：[**docs/服务端部署指南.md**](docs/服务端部署指南.md)。
+| 表名 | 用途 | 关键字段 | 索引 / 约束 |
+| --- | --- | --- | --- |
+| `sys_user` | 博主账号 | `username`、`password`(BCrypt)、`nickname`、`avatar`、`status` | `uk_sys_user_username` |
+| `blog_post` | 文章 | `slug`、`title`、`subtitle`、`excerpt`、`tags`、`content`(LONGTEXT)、`cover`、`status`、`pinned`、`views`、`published_at` | `uk_blog_post_slug`、`idx(status, published_at)` |
+| `blog_category` | 分类 | `name`、`slug`、`sort` | `uk_blog_category_name` |
+| `blog_post_category` | 文章↔分类 | `post_id`、`category_id` | 联合主键、`idx_pc_category` |
+| `blog_collection` | 综集（系列） | `slug`、`title`、`subtitle`、`description`、`cover`、`runes`、`sort` | `uk_blog_collection_slug` |
+| `blog_post_collection` | 文章↔综集 | `post_id`、`collection_id` | 联合主键、`idx_pcol_collection` |
+| `blog_message_board` | 留言墙 | `author`、`content`、`wall`(top/left/right)、`bg_color`、`font_color`、`texture`、`rotation`、`pinned`、`ip`、`status` | `idx(status, created_at)`、`idx_msg_ip` |
+| `blog_comment` | 文章评论 | `post_id`、`author`、`content`、`ip`、`status`、`created_at` | `idx_comment_post(post_id, status, created_at)` |
+| `blog_music` | 曲库 | `title`、`artist`、`cover`、`url`、`kind`(synth/url/upload)、`size`、`sort` | `idx_music_sort` |
+| `blog_checkin` | 博主签到 | `checkin_date` | `uk_checkin_date`（一天一条） |
+| `blog_anniversary` | 纪念日倒计时 | `label`、`memorial_date`(MM-DD)、`note`、`sort` | `idx_anniversary_sort` |
+| `blog_config` | 站点键值配置 | `config_key`、`config_value`（如 `site.start-date`） | 主键 `config_key` |
+
+### 关系
+
+```
+blog_post ──< blog_post_category >── blog_category
+     │
+     ├──< blog_post_collection >── blog_collection
+     └──< blog_comment
+sys_user        博主单账号，与内容无外键（作者即博主）
+blog_message_board / blog_music / blog_checkin / blog_anniversary / blog_config  独立表
+```
+
+- `status` 约定：`published` / `draft` / `hidden`（文章）、`approved` / `pending`（留言与评论）。
+- `blog_anniversary.memorial_date` 只存 `MM-DD`，每年循环；开站日期存 `blog_config` 的 `site.start-date`。
+- 表间不建物理外键，由业务层维护一致性（便于分库与清理）。
+
+### Redis 键
+
+| 键 | 用途 |
+| --- | --- |
+| `auth:token:<jti>` | JWT 白名单（7 天 TTL） |
+| `rl:*` | 接口限流（留言每分钟 1 / 每小时 5，评论每分钟 1 / 每小时 10） |
+| `blog:uv:<date>` | 当日 UV Set（去重，保留 120 天） |
+| `blog:pages` | 热门页面计数 Hash（Top5） |
 
 ---
 
-## 视觉与动效
+## 快速开始
 
-主题保持「暗黑暗红复古魔幻」，历经四轮文档驱动优化：
+### 前置要求
 
-- **全局**：无魔法阵，火雨粒子（Canvas，右上→左下 225°，`prefers-reduced-motion` 自动关闭）；页头页脚用压缩后的 `logo.png`；调色板：爆裂红 `#A52A36`、深红暗影 `#641C2B`、深渊暗黑 `#17151C`、魔法阵金 `#D9AC58`、卷轴米白 `#F4EBDD`。
-- **纹理**：`public/assets/textures/`（羊皮纸 / 方格纸 / 星屑，由素材包裁切压缩）用于关于页摘句、便签纸纹、软木板与粒子贴图。
-- **英雄区**：`object-fit: cover` 铺满，`blur(0.5px) brightness(1.12)`，方向性渐变遮罩。
-- **手记卡片**：封面 `object-fit: contain` 完整展示 + 同图模糊底衬。
-- **留言墙**：FLIP 抽取式放大动效（`getBoundingClientRect` → `translate3d + rotate + scale` 补间，原位幽灵占位，`transitionend` 销毁）。
-- **空状态**：镂空插画 + 提示双栏，内容区居中。
-- **404**：路由 `meta.bare` 隐藏侧栏的全宽沉浸页。
-- **滚动条**：全局 thin + 主题色滑块。
-- **音乐**：内置曲用 Web Audio 实时合成（`src/lib/chime.ts`），首屏零音频加载；图标为内联 SVG `MagicIcon`，无图标库依赖。
+| 依赖 | 版本 |
+| --- | --- |
+| Node.js | 20+ |
+| JDK | 17+ |
+| Maven | 3.8+ |
+| MySQL | 8.0+ |
+| Redis | 7.x |
 
-## 素材
+### 1. 安装前端依赖
 
-视觉素材来自 `meguminUI/slices/`（惠惠主题 UI 素材包），仅用于本项目主题演示；角色与作品版权归原作者及版权方所有。
+```bash
+npm install
+```
+
+### 2. 准备数据库与缓存
+
+```sql
+CREATE DATABASE blog_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+启动本机 Redis（默认 `localhost:6379`，无密码）。若你的 MySQL 账号密码不是 `root / 123456`，用环境变量覆盖，例如：
+
+```bash
+export MYSQL_USER=blog
+export MYSQL_PASSWORD=your-password
+```
+
+### 3. 启动后端
+
+```bash
+cd backend
+mvn -DskipTests package
+java -jar target/app.jar
+# 或开发模式：mvn spring-boot:run
+```
+
+启动后 `http://localhost:8080/actuator/health` 返回 `UP`，首次启动会自动建好 12 张表（不插数据）。默认 dev 配置的数据库连接：`localhost:3306/blog_db`，账号 `root/123456`，可用 `MYSQL_*` / `REDIS_*` 环境变量覆盖。
+
+### 4. 启动前端
+
+```bash
+npm run dev     # http://localhost:5173
+```
+
+`.env.development` 默认 `VITE_API_BASE_URL=http://localhost:8080/api`，无需修改。
+
+其他脚本：
+
+```bash
+npm run build      # 生产构建 → dist/
+npm run preview    # 预览构建产物
+npm run typecheck  # vue-tsc 类型检查
+```
+
+### 5. 登录后台
+
+1. 打开 `http://localhost:5173`
+2. 连点左侧头像 **5 次**，或按 `Ctrl + Shift + L`
+3. 用[下面创建的账号](#创建博主账号)登录
+
+---
+
+## 创建博主账号
+
+出于安全考虑，**项目不内置任何默认账号，启动也不会自动创建用户**。请自行生成 BCrypt 哈希后插入：
+
+```bash
+cd scripts
+npm install
+node hash-password.mjs 'your-password'
+# 输出：$2a$10$....（复制这一整串）
+```
+
+```sql
+INSERT INTO sys_user (username, password, nickname, status)
+VALUES ('admin', '<粘贴上一步的哈希>', '博主', 1);
+```
+
+数据库只保存哈希，不看得到明文。之后可在后台「修改密码」或调 `POST /api/auth/password` 更换。
+
+---
+
+## 导入示例数据
+
+仓库自带 2 篇示例文章和一个示例综集，可选导入（不导也能用，直接后台发文）：
+
+```bash
+mysql -uroot -p blog_db < backend/src/main/resources/seed.sql
+```
+
+种子由 `scripts/gen-seed.mjs` 从 `content/` 生成，格式说明：
+
+- `content/posts/*.md`：文章，frontmatter 支持 `title` / `subtitle` / `date` / `tags` / `categories` / `collections` / `cover` / `excerpt` / `pinned` / `draft`
+- `content/collections.json`：综集定义与 `siteStartDate`（开站日期）
+
+改完 Markdown 后重新生成：
+
+```bash
+node scripts/gen-seed.mjs   # 重写 backend/src/main/resources/seed.sql
+```
+
+种子用 `INSERT IGNORE` + 显式主键，可重复执行不覆盖已有数据。
+
+> 日常发文不需要这套流程：直接用后台编辑器发布，内容实时入库。
+
+---
+
+## Docker Compose 部署
+
+```bash
+cp .env.example .env       # 填写 MYSQL_ROOT_PASSWORD / REDIS_PASSWORD / JWT_SECRET（32 位以上随机串）
+npm ci && npm run build    # 生成 dist/
+docker compose up -d --build
+```
+
+四个服务：`mysql`、`redis`、`backend`、`frontend`（nginx）。容器首次启动只执行建表，不灌数据；账号与示例数据仍按上面两步手工导入。
+
+部署到公网服务器（HTTPS、证书、域名、备份、排错、性能调优）请看 **[docs/服务端部署指南.md](docs/服务端部署指南.md)**，配置里的 `your-domain.com` 换成你的域名即可。
+
+---
+
+## 个性化配置
+
+| 想改什么 | 改哪里 |
+| --- | --- |
+| 博客标题、副标题 | `src/data/site.ts` 的 `title` / `subtitle`（同步改 `index.html` 的 `<title>`） |
+| 博主名字、简介、头像、社交链接 | `src/data/site.ts` 的 `author` |
+| 开站日期、纪念日 | 登录后台 →「站点设置」 tab（存数据库，无需改代码） |
+| 主题配色 | `src/styles/tokens.css` 的 CSS 变量（爆裂红 / 魔法阵金 / 深渊黑等） |
+| 首页文案、关于页 | `src/views/HomeView.vue`、`src/views/AboutView.vue` |
+| 导航菜单 | `src/components/layout/AppHeader.vue` |
+| 封面与纹理素材 | `public/assets/megumin/`、`public/assets/textures/` |
+| 示例文章 | `content/posts/*.md` → 重新生成 seed，或直接在后台删改 |
+| 登录入口触发方式 | `src/components/widgets/ProfileCard.vue`（连点头像 5 次）、`src/App.vue`（`Ctrl + Shift + L`） |
+| 接口地址（前端） | `.env.development` / `.env.production` 的 `VITE_API_BASE_URL` |
+| 人机校验 | `VITE_TURNSTILE_SITE_KEY`（前端）+ `TURNSTILE_SECRET`（后端）；留空则跳过校验 |
+
+---
+
+## 管理后台
+
+| 能力 | 说明 |
+| --- | --- |
+| 文章 | 新建 / 编辑 / 删除 / 置顶 / 隐藏 / 草稿；Markdown 编辑 + 预览；上传 `.md` 一键解析 |
+| 封面 | 选图后浏览器端压成 WebP 再上传，落盘 `data/uploads/` |
+| 综集 | 增删改，设置封面、符文、排序 |
+| 评论 / 留言 | 列表查看、置顶、删除 |
+| 曲库 | 上传音频或填外链，调整排序 |
+| 站点设置 | 开站日期 + 纪念日 CRUD |
+| 统计 | 14 天 PV/UV 趋势、热门页面 Top5 |
+| 账号 | 修改密码（改后需重新登录） |
+
+**接口安全**：`/api/admin/**` 全部经 JWT 拦截器校验；登录失败与写接口有 Redis 限流；留言与评论内容经 Jsoup 净化后入库。
+
+---
+
+## API 一览
+
+统一前缀 `/api`，响应 `{ code, message, data }`（`code=0` 成功）。
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/auth/login` | 登录，返回 JWT |
+| GET | `/auth/me` | 校验当前会话 |
+| POST | `/auth/logout` | 退出（删除 Redis 会话） |
+| POST | `/auth/password` | 修改密码 |
+| GET | `/site` | 站点信息（开站日期 + 纪念日） |
+| GET | `/posts` | 文章列表（分页、分类、搜索、排序） |
+| GET | `/posts/{slug}` | 文章详情 |
+| GET/POST | `/posts/{slug}/comments` | 文章评论列表 / 发表 |
+| GET | `/collections` | 综集列表与详情 |
+| GET/POST | `/messages` | 留言墙列表 / 发表 |
+| GET | `/music` | 曲库 |
+| GET/POST | `/checkin` | 签到状态 / 打卡 |
+| POST | `/track` | PV/UV 上报 |
+| — | `/admin/**` | 后台管理接口（需 Bearer token） |
+
+---
+
+## 开源协议
+
+代码以 [MIT License](LICENSE) 开源，可自由使用、修改、分发、商用。
+
+**素材声明**：`public/assets/megumin/` 中的角色立绘与主题素材取自第三方《为美好的世界献上祝福！》主题 UI 素材包，**版权归原作者及版权方所有**，仅限本项目演示与个人学习使用，不可商用。若你要用于正式站点，请替换为自己的图片素材（路径可在 `src/data/site.ts` 与 `public/assets/` 中调整）。
+
+**第三方依赖** 各自遵循其原许可（Vue、Naive UI、Spring Boot、MySQL 等）。
+
+---
+
+## 致谢
+
+- UI 主题：惠惠（《为美好的世界献上祝福！》）同人素材
+- 灵感与排版参考：各类优秀个人博客
+
+> 如果这个项目对你有帮助，欢迎点个 Star ⭐
