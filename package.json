@@ -1,0 +1,33 @@
+{
+  "name": "megumin-blog",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Megumin themed personal blog — Vue 3 + TypeScript + Vite + Pinia",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "axios": "^1.21.0",
+    "dayjs": "^1.11.13",
+    "highlight.js": "^11.11.1",
+    "jszip": "^3.10.1",
+    "markdown-it": "^14.1.0",
+    "naive-ui": "^2.40.3",
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vite-plugin-vue-devtools": "^8.2.1",
+    "vue-tsc": "^2.2.0"
+  }
+}

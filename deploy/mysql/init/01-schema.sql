@@ -1,0 +1,138 @@
+-- Megumin Blog 博客数据库结构（MySQL 8.0 / utf8mb4）
+CREATE TABLE IF NOT EXISTS sys_user (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  username VARCHAR(64) NOT NULL,
+  password VARCHAR(100) NOT NULL,
+  nickname VARCHAR(64) DEFAULT NULL,
+  avatar VARCHAR(255) DEFAULT NULL,
+  status TINYINT NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_sys_user_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_post (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  slug VARCHAR(160) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  subtitle VARCHAR(255) DEFAULT NULL,
+  excerpt VARCHAR(500) DEFAULT NULL,
+  tags VARCHAR(500) DEFAULT NULL,
+  content LONGTEXT NOT NULL,
+  cover VARCHAR(500) DEFAULT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'published',
+  pinned TINYINT(1) NOT NULL DEFAULT 0,
+  views INT NOT NULL DEFAULT 0,
+  published_at DATE DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_blog_post_slug (slug),
+  KEY idx_blog_post_status_date (status, published_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_category (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name VARCHAR(64) NOT NULL,
+  slug VARCHAR(80) NOT NULL,
+  sort INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_blog_category_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_post_category (
+  post_id BIGINT UNSIGNED NOT NULL,
+  category_id BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (post_id, category_id),
+  KEY idx_pc_category (category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_collection (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  slug VARCHAR(120) NOT NULL,
+  title VARCHAR(160) NOT NULL,
+  subtitle VARCHAR(160) DEFAULT NULL,
+  description VARCHAR(500) DEFAULT NULL,
+  cover VARCHAR(500) DEFAULT NULL,
+  runes VARCHAR(120) DEFAULT NULL,
+  sort INT NOT NULL DEFAULT 99,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_blog_collection_slug (slug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_post_collection (
+  post_id BIGINT UNSIGNED NOT NULL,
+  collection_id BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (post_id, collection_id),
+  KEY idx_pcol_collection (collection_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_message_board (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  author VARCHAR(32) NOT NULL,
+  content VARCHAR(600) NOT NULL,
+  wall VARCHAR(16) NOT NULL DEFAULT 'top',
+  bg_color VARCHAR(16) NOT NULL DEFAULT '#F4EBDD',
+  font_color VARCHAR(16) NOT NULL DEFAULT '#3A2027',
+  texture VARCHAR(16) NOT NULL DEFAULT 'paper',
+  rotation DECIMAL(5,2) NOT NULL DEFAULT 0,
+  pinned TINYINT(1) NOT NULL DEFAULT 0,
+  ip VARCHAR(64) DEFAULT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'approved',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_msg_status_time (status, created_at),
+  KEY idx_msg_ip (ip)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_music (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  title VARCHAR(160) NOT NULL,
+  artist VARCHAR(160) DEFAULT NULL,
+  cover VARCHAR(500) DEFAULT NULL,
+  url VARCHAR(800) NOT NULL,
+  kind VARCHAR(16) NOT NULL DEFAULT 'url',
+  size BIGINT NOT NULL DEFAULT 0,
+  sort INT NOT NULL DEFAULT 99,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_music_sort (sort)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_checkin (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  checkin_date DATE NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_checkin_date (checkin_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_anniversary (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  label VARCHAR(64) NOT NULL COMMENT '纪念日名称',
+  memorial_date VARCHAR(8) NOT NULL COMMENT 'MM-DD，每年循环',
+  note VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
+  sort INT NOT NULL DEFAULT 99,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_anniversary_sort (sort)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_config (
+  config_key VARCHAR(64) NOT NULL,
+  config_value VARCHAR(255) NOT NULL,
+  PRIMARY KEY (config_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_comment (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  post_id BIGINT UNSIGNED NOT NULL,
+  author VARCHAR(64) NOT NULL,
+  content VARCHAR(1200) NOT NULL,
+  ip VARCHAR(64) DEFAULT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'approved',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_comment_post (post_id, status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

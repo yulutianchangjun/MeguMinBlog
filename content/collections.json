@@ -1,0 +1,14 @@
+{
+  "siteStartDate": "2026-01-01",
+  "collections": [
+    {
+      "id": "getting-started",
+      "title": "开始使用",
+      "subtitle": "Getting Started",
+      "description": "从这里开始：认识这个博客的结构，然后写下你自己的第一篇。",
+      "cover": "assets/megumin/megumin-chibi.webp",
+      "runes": "START",
+      "order": 1
+    }
+  ]
+}

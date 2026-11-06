@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    # 本地开发默认连本机 MySQL（root / 123456），可用环境变量覆盖：
+    #   MYSQL_HOST / MYSQL_PORT / MYSQL_DATABASE / MYSQL_USER / MYSQL_PASSWORD
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:blog_db}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  sql:
+    init:
+      # 启动只建表（结构，幂等 CREATE TABLE IF NOT EXISTS），不插入任何数据。
+      # 种子内容与博主账号均需手工导入：见 docs/服务端部署指南.md。
+      mode: always
+      schema-locations: classpath:schema.sql
+      continue-on-error: false
+
+logging:
+  level:
+    xyz.cy666.blog.mapper: debug
+    org.springframework.jdbc.core: debug

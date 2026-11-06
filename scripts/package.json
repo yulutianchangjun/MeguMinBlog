@@ -1,0 +1,9 @@
+{
+  "name": "blog-scripts",
+  "private": true,
+  "type": "module",
+  "description": "博客运维脚本（BCrypt 哈希生成等），独立于前端依赖",
+  "dependencies": {
+    "bcryptjs": "^2.4.3"
+  }
+}

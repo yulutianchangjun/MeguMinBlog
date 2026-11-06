@@ -1,0 +1,42 @@
+:root {
+  --c-primary: #a52a36;
+  --c-primary-2: #c73c4b;
+  --c-primary-deep: #6d1d29;
+  --c-secondary: #641c2b;
+  --c-bg: #17151c;
+  --c-bg-deep: #100d13;
+  --c-surface: #1e1a25;
+  --c-surface-2: #251f2e;
+  --c-surface-3: #2c2433;
+  --c-gold: #d9ac58;
+  --c-gold-2: #f2dba6;
+  --c-gold-dim: #8f743c;
+  --c-paper: #f4ebdd;
+  --c-text: #e9dfd2;
+  --c-text-2: #b6aaa0;
+  --c-muted: #8b8078;
+  --c-line: rgba(217, 172, 88, 0.18);
+  --c-line-strong: rgba(217, 172, 88, 0.4);
+  --c-shadow: rgba(0, 0, 0, 0.55);
+
+  --r-lg: 18px;
+  --r-md: 12px;
+  --r-sm: 8px;
+
+  --font-display: 'Cinzel', 'Songti SC', 'Noto Serif SC', 'STSong', Georgia, serif;
+  --font-body: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Courier New', monospace;
+
+  --header-h: 78px;
+  --max-w: 1480px;
+  --gutter: 24px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  /* 本地纹理资产 */
+  --tex-parchment: url('/assets/textures/parchment-fill.jpg');
+  --tex-scroll: url('/assets/textures/parchment-scroll.webp');
+  --tex-grid: url('/assets/textures/grid-fill.jpg');
+  --tex-grid-paper: url('/assets/textures/grid-paper.webp');
+  --tex-stardust: url('/assets/textures/stardust.webp');
+  --tex-star: url('/assets/textures/star-1.webp');
+}
