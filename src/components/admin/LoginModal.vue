@@ -55,18 +55,12 @@ async function submit() {
         <span class="badge"><MagicIcon name="shield" :size="15" /></span>
         <span class="eyebrow">Owner Only · 博主登录</span>
         <h2>推开这扇门</h2>
-        <p>账号由后端 <code>sys_user</code> 表管理，登录后签发 JWT 并在 Redis 维持会话白名单。</p>
-      </div>
-
-      <div class="server-row" :class="{ off: !apiReady }">
-        <span>{{ apiReady ? 'API' : '未配置后端' }}</span>
-        <strong>{{ apiReady ? API_BASE : '只读静态模式' }}</strong>
       </div>
 
       <form class="form" @submit.prevent="submit">
         <label class="field">
           <span>账号</span>
-          <input v-model="username" autocomplete="username" placeholder="admin" spellcheck="false" />
+          <input v-model="username" autocomplete="username" placeholder="请输入账号" spellcheck="false" />
         </label>
         <label class="field">
           <span>密码</span>
@@ -74,7 +68,7 @@ async function submit() {
             v-model="password"
             type="password"
             autocomplete="current-password"
-            placeholder="••••••••"
+            placeholder="请输入密码"
           />
         </label>
 

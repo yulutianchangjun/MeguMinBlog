@@ -2,10 +2,11 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import { site } from '@/data/site'
 import { useContentStore } from '@/stores/content'
+import { useSiteStore } from '@/stores/site'
 
 const content = useContentStore()
+const siteStore = useSiteStore()
 const router = useRouter()
 
 const today = new Date()
@@ -29,7 +30,7 @@ const postMap = computed(() => {
 
 const festivalMap = computed(() => {
   const map = new Map<string, string>()
-  for (const item of site.anniversaries) {
+  for (const item of siteStore.anniversaries) {
     map.set(item.date, item.label)
   }
   return map

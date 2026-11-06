@@ -2,7 +2,7 @@
 /**
  * 把 content/ 下的 Markdown 与 collections.json 生成 MySQL 种子 SQL。
  * 用法：node scripts/gen-seed.mjs
- * 输出：backend/src/main/resources/seed.sql、deploy/mysql/init/02-seed.sql
+ * 输出：backend/src/main/resources/seed.sql（手工导入用，启动不会自动执行）
  */
 import fs from 'node:fs'
 import path from 'node:path'
@@ -134,7 +134,7 @@ const categories = [...new Set(posts.flatMap((p) => p.categories))].sort((a, b) 
 // ---------- 生成 ----------
 const lines = [
   '-- 由 scripts/gen-seed.mjs 自动生成，请勿手改。',
-  '-- 内容来源：content/posts/*.md + content/collections.json',
+  '-- 内容来源：content/posts/*.md + content/collections.json + 生成器内置的站点种子',
   'SET NAMES utf8mb4;',
   '',
   '-- 综集',
@@ -197,13 +197,41 @@ for (const post of posts) {
   }
 }
 
+// ---------- 站点种子：开站日期 / 纪念日 / 内置合成曲 ----------
+// 纪念日与合成曲是站点级静态内容，写死在生成器里；INSERT IGNORE + 显式主键保证可重放。
+const siteStartDate = collectionsJson.siteStartDate ?? '2026-11-05'
+lines.push('', '-- 站点配置与纪念日倒计时')
+lines.push(
+  `INSERT IGNORE INTO blog_config (config_key, config_value) VALUES ('site.start-date', ${q(siteStartDate)});`,
+)
+const anniversaries = [
+  { id: 1, label: '云汀凫的生日', date: '11-30', note: '红魔族最伟大的魔法使诞生之日', sort: 0 },
+  { id: 2, label: '学会爆裂魔法纪念日', date: '06-15', note: '第一次把山丘夷为平地', sort: 1 },
+  { id: 3, label: '博客开站周年', date: '11-05', note: '手记的第一页', sort: 2 },
+]
+for (const item of anniversaries) {
+  lines.push(
+    `INSERT IGNORE INTO blog_anniversary (id, label, memorial_date, note, sort) VALUES (${item.id}, ${q(item.label)}, ${q(item.date)}, ${q(item.note)}, ${item.sort});`,
+  )
+}
+
+lines.push('', '-- 内置合成曲（kind=synth，url 对应前端 Web Audio 引擎的曲谱 id）')
+const synthTunes = [
+  { id: 1, title: '爆裂魔法のテーマ', url: 'explosion-theme', sort: 1 },
+  { id: 2, title: '紅魔族の朝', url: 'red-demon-morning', sort: 2 },
+  { id: 3, title: '荒野の夜', url: 'night-wilderness', sort: 3 },
+]
+for (const tune of synthTunes) {
+  lines.push(
+    `INSERT IGNORE INTO blog_music (id, title, artist, cover, url, kind, size, sort) VALUES (${tune.id}, ${q(tune.title)}, '惠惠的留声机', '', ${q(tune.url)}, 'synth', 0, ${tune.sort});`,
+  )
+}
+
 lines.push('')
 
 const sql = lines.join('\n')
-const outputs = [
-  path.join(root, 'backend', 'src', 'main', 'resources', 'seed.sql'),
-  path.join(root, 'deploy', 'mysql', 'init', '02-seed.sql'),
-]
+// 种子只是手工导入的参考数据：启动与容器首启都不会自动执行。
+const outputs = [path.join(root, 'backend', 'src', 'main', 'resources', 'seed.sql')]
 for (const file of outputs) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, sql, 'utf8')

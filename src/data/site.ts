@@ -15,35 +15,11 @@ export const site: SiteConfig = {
       // { label: 'Mail', icon: 'mail', href: 'mailto:megumin@example.com' },
     ],
   },
-  // —— 评论：giscus（GitHub Discussions），需填 repoId / categoryId ——
-  comments: {
-    repo: 'yulutianchangjun/gitHub-blog',
-    repoId: '',
-    category: 'Comments',
-    categoryId: '',
-    mapping: 'specific',
-    strict: true,
-    reactionsEnabled: true,
-    inputPosition: 'top',
-    lang: 'zh-CN',
-    theme: 'transparent_dark',
-  },
   // —— 反机器人：Cloudflare Turnstile 站点公钥（也可用 VITE_TURNSTILE_SITE_KEY 覆盖）——
+  // —— 文章评论与留言墙均走本站后端（MySQL），与 GitHub 无关 ——
   turnstile: {
     siteKey: import.meta.env.VITE_TURNSTILE_SITE_KEY || '',
   },
-  anniversaries: [
-    { label: '云汀凫的生日', date: '11-30', note: '红魔族最伟大的魔法使诞生之日' },
-    { label: '学会爆裂魔法纪念日', date: '06-15', note: '第一次把山丘夷为平地' },
-    { label: '博客开站周年', date: '11-05', note: '手记的第一页' },
-  ],
+  // —— 纪念日倒计时与开站日期已迁至后端（GET /api/site），后台「站点设置」可管理 ——
   icp: '',
-  startDate: '2026-11-05',
 }
-
-export const githubRepoUrl = site.comments.repo ? `https://github.com/${site.comments.repo}` : ''
-
-export const discussionsUrl = githubRepoUrl ? `${githubRepoUrl}/discussions` : ''
-
-/** giscus 是否已经配置完整 */
-export const giscusReady = Boolean(site.comments.repo && site.comments.repoId && site.comments.categoryId)

@@ -159,7 +159,7 @@ onBeforeUnmount(() => {
           <span><MagicIcon name="clock" :size="13" />{{ minutes }} 分钟阅读</span>
           <button class="meta-link" @click="jumpComments">
             <MagicIcon name="comment" :size="13" />
-            GitHub 讨论
+            写评论
           </button>
           <span v-if="post.updated"><MagicIcon name="edit" :size="13" />更新于 {{ formatDate(post.updated) }}</span>
         </div>

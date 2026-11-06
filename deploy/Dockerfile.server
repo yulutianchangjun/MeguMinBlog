@@ -1,0 +1,6 @@
+# 云端服务器专用：直接用本地构建好的 app.jar（不在服务器上跑 maven，省内存）
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+ENV TZ=Asia/Shanghai
+COPY app.jar /app/app.jar
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]

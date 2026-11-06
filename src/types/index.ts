@@ -76,21 +76,6 @@ export interface ContentOverlay {
   collectionsDeleted: string[]
 }
 
-export interface GiscusConfig {
-  /** owner/name，与 repo 保持一致即可 */
-  repo: string
-  repoId: string
-  category: string
-  categoryId: string
-  /** hash 路由下必须用 specific，按文章 slug 建讨论 */
-  mapping: 'pathname' | 'url' | 'title' | 'og:title' | 'specific'
-  strict: boolean
-  reactionsEnabled: boolean
-  inputPosition: 'top' | 'bottom'
-  lang: string
-  theme: string
-}
-
 export interface TurnstileConfig {
   /** Cloudflare Turnstile 站点公钥；留空则跳过校验 */
   siteKey: string
@@ -107,9 +92,6 @@ export interface SiteConfig {
     location: string
     socials: { label: string; icon: string; href: string }[]
   }
-  comments: GiscusConfig
   turnstile: TurnstileConfig
-  anniversaries: { label: string; date: string; note?: string; lunar?: boolean }[]
   icp?: string
-  startDate: string
 }

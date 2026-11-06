@@ -26,7 +26,7 @@ const customCount = computed(() => player.playlist.filter((item) => item.kind !=
 
 function kindLabel(item: Track): string {
   if (item.kind === 'synth') return '内置'
-  return item.kind === 'file' ? '本地' : '外链'
+  return item.kind === 'file' ? '上传' : '外链'
 }
 
 function select(index: number) {
@@ -131,7 +131,7 @@ onBeforeUnmount(() => {
                 {{ player.playing ? '播放中' : '已选中' }}
               </span>
 
-              <span v-if="auth.isAdmin && item.kind !== 'synth'" class="trk-ops" @click.stop>
+              <span v-if="auth.isAdmin" class="trk-ops" @click.stop>
                 <template v-if="confirmId === item.id">
                   <button class="op danger" title="确认删除" @click="confirmRemove(item)">
                     <MagicIcon name="check" :size="12" />

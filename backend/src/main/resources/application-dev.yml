@@ -16,9 +16,10 @@ spring:
         password:
   sql:
     init:
+      # 启动只建表（结构，幂等 CREATE TABLE IF NOT EXISTS），不插入任何数据。
+      # 种子内容与博主账号均需手工导入：见 docs/服务端部署指南.md。
       mode: always
       schema-locations: classpath:schema.sql
-      data-locations: classpath:seed.sql
       continue-on-error: false
 
 logging:

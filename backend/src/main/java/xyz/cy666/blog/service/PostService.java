@@ -120,7 +120,12 @@ public class PostService {
         post.setStatus(status);
         post.setPinned(Boolean.TRUE.equals(request.getPinned()));
         post.setPublishedAt(request.getPublishedAt() == null ? LocalDate.now() : request.getPublishedAt());
-        post.setSlug(uniqueSlug(request.getSlug(), post.getTitle(), post.getId()));
+        // slug：新建时用请求值/标题生成；更新时未显式传 slug 则沿用原值，避免编辑保存后链接失效
+        String requestedSlug = request.getSlug();
+        if (!StringUtils.hasText(requestedSlug) && post.getId() != null && StringUtils.hasText(post.getSlug())) {
+            requestedSlug = post.getSlug();
+        }
+        post.setSlug(uniqueSlug(requestedSlug, post.getTitle(), post.getId()));
         post.setUpdatedAt(LocalDateTime.now());
 
         if (post.getId() == null) {

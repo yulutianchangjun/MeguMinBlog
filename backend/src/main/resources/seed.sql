@@ -1,5 +1,5 @@
 -- 由 scripts/gen-seed.mjs 自动生成，请勿手改。
--- 内容来源：content/posts/*.md + content/collections.json
+-- 内容来源：content/posts/*.md + content/collections.json + 生成器内置的站点种子
 SET NAMES utf8mb4;
 
 -- 综集
@@ -548,3 +548,14 @@ INSERT IGNORE INTO blog_post_collection (post_id, collection_id) SELECT p.id, c.
 INSERT IGNORE INTO blog_post_collection (post_id, collection_id) SELECT p.id, c.id FROM blog_post p, blog_collection c WHERE p.slug = 'the-hat' AND c.slug = 'red-demon-days';
 INSERT IGNORE INTO blog_post_collection (post_id, collection_id) SELECT p.id, c.id FROM blog_post p, blog_collection c WHERE p.slug = 'why-once-a-day' AND c.slug = 'explosion-theory';
 INSERT IGNORE INTO blog_post_collection (post_id, collection_id) SELECT p.id, c.id FROM blog_post p, blog_collection c WHERE p.slug = 'wilderness-marks' AND c.slug = 'world-travel';
+
+-- 站点配置与纪念日倒计时
+INSERT IGNORE INTO blog_config (config_key, config_value) VALUES ('site.start-date', '2024-11-05');
+INSERT IGNORE INTO blog_anniversary (id, label, memorial_date, note, sort) VALUES (1, '云汀凫的生日', '11-30', '红魔族最伟大的魔法使诞生之日', 0);
+INSERT IGNORE INTO blog_anniversary (id, label, memorial_date, note, sort) VALUES (2, '学会爆裂魔法纪念日', '06-15', '第一次把山丘夷为平地', 1);
+INSERT IGNORE INTO blog_anniversary (id, label, memorial_date, note, sort) VALUES (3, '博客开站周年', '11-05', '手记的第一页', 2);
+
+-- 内置合成曲（kind=synth，url 对应前端 Web Audio 引擎的曲谱 id）
+INSERT IGNORE INTO blog_music (id, title, artist, cover, url, kind, size, sort) VALUES (1, '爆裂魔法のテーマ', '惠惠的留声机', '', 'explosion-theme', 'synth', 0, 1);
+INSERT IGNORE INTO blog_music (id, title, artist, cover, url, kind, size, sort) VALUES (2, '紅魔族の朝', '惠惠的留声机', '', 'red-demon-morning', 'synth', 0, 2);
+INSERT IGNORE INTO blog_music (id, title, artist, cover, url, kind, size, sort) VALUES (3, '荒野の夜', '惠惠的留声机', '', 'night-wilderness', 'synth', 0, 3);

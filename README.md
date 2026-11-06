@@ -4,7 +4,7 @@
 
 视觉素材取自仓库内 `meguminUI/slices/`（惠惠主题 UI 素材切片），调色板与布局按《个人博客系统架构与需求设计说明书》实现。
 
-> 本版（第五版）由 GitOps 纯静态方案切换为服务端方案，全部读写走 REST API。前端保留了**无后端时的只读降级**——后端不可用时，前台用构建期 Markdown 展示内容，但登录/留言/后台不可用并给出提示。完整部署步骤见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
+> 本版（第五版）由 GitOps 纯静态方案切换为服务端方案，**前端不保留任何静态内容数据**：文章、综集、曲库、签到、UV、纪念日、开站日期全部实时来自 REST API；后端不可用时前台显示空态与「无法连接后端」提示。完整部署步骤见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
 
 ---
 
@@ -31,12 +31,12 @@ mvn -DskipTests package
 MYSQL_PASSWORD=你的密码 java -jar target/app.jar
 ```
 
-`dev` profile 自动执行建表 + 种子数据，并按 `ADMIN_USERNAME` / `ADMIN_PASSWORD`（默认 `admin` / `Explosion@2026`）创建博主账号。
+`dev` profile 启动时只自动建表（`CREATE TABLE IF NOT EXISTS`，幂等），**不插入任何数据**：初始内容用 `mysql < backend/src/main/resources/seed.sql` 手工导入（可选）；博主账号由本人执行 `node scripts/hash-password.mjs` 生成 BCrypt 哈希后手工插入 `sys_user`（数据库只存哈希，代码里没有默认账号）。详见 [docs/服务端部署指南.md](docs/服务端部署指南.md)。
 
 ### Docker Compose（生产）
 
 ```bash
-cp .env.example .env    # 填 MYSQL_ROOT_PASSWORD / REDIS_PASSWORD / JWT_SECRET / ADMIN_PASSWORD
+cp .env.example .env    # 填 MYSQL_ROOT_PASSWORD / REDIS_PASSWORD / JWT_SECRET（博主账号手工插库，不走 env）
 npm ci && npm run build
 docker compose up -d --build
 ```
@@ -55,7 +55,7 @@ Internet (HTTPS 443)
    ├── /            → Vue 3 SPA（dist/，try_files 回退 index.html）
    ├── /uploads/    → 上传的封面 / 音频（宿主机 data/uploads）
    └── /api/        → Spring Boot :8080 (backend 容器)
-                         ├── MySQL 8（文章、综集、留言、音乐、签到）
+                         ├── MySQL 8（文章、综集、留言、音乐、签到、纪念日、站点配置）
                          └── Redis 7（JWT 会话、限流、PV/UV）
 ```
 
@@ -70,21 +70,22 @@ Internet (HTTPS 443)
 | 模块 | 已实现 |
 | --- | --- |
 | 全局布局 | Header（LOGO / 导航 / 操作区）、左侧博主卡 + 音乐播放器、右侧日历 + 纪念日倒计时、Footer；响应式单列降级 |
+| 纪念日倒计时 | 开站日期与纪念日列表来自 `GET /api/site`，后台「站点设置」可增删改与调整排序；日历同步标记纪念日 |
 | 首页 | 打字机欢迎语、火雨与星屑粒子、近期精选、置顶留言走马灯、签到成就看板、综集速览 |
 | 日常流 | 多分类筛选、全文/标题实时搜索、最新/最早/最热排序、数字分页；筛选与页码同步至 URL Query + `KeepAlive` + 滚动位置还原；空结果时展示双栏空状态 |
-| 文章详情 | 封面 Hero（缺省回退主题色）、Markdown 渲染与代码高亮、目录滚动高亮与阅读进度、悬浮返回/回顶、点赞、复制链接、上下篇 |
+| 文章详情 | 封面 Hero（缺省回退主题色）、Markdown 渲染与代码高亮、目录滚动高亮与阅读进度、悬浮返回/回顶、点赞、复制链接、上下篇；**本站评论区**（昵称 + 内容，数据存 MySQL `blog_comment`，限流 + Turnstile + Jsoup 净化，楼层式展示） |
 | 综集 | 横向轮播（滚动吸附 + 箭头/圆点）、封面等比完整展示 + 同图模糊底衬、合集内复用日常卡片 |
 | 留言墙 | 上/左/右三面软木板，每面每批 5 张；钉满自动封存并开启新批次，可回看历史批次；访客自定义底色、字色、纸纹与墙面；右下角签名与时间戳；点击卡片 FLIP 抽取式放大预览。**数据存 MySQL**，发表走 API（限流 + Turnstile），管理员可置顶/删除 |
-| 管理面板 | 隐藏唤起（连点头像 5 次或 `Ctrl + Shift + L`）、账号密码登录、文章新建/编辑/删除/置顶/隐藏/草稿、封面上传、编辑器内 `.md` 一键解析、综集增删改、留言置顶/删除、曲库管理、UV 仪表盘、修改密码。**全部走 REST API 落库** |
-| 音乐播放器 | 内置 3 段 Web Audio 合成曲；博主可添加曲目——本地音频（上传到后端 `data/uploads`）或外链；全局曲库弹窗（Teleport）支持切歌、二次确认删除、超长列表内部滚动与当前曲目高亮 |
+| 管理面板 | 隐藏唤起（连点头像 5 次或 `Ctrl + Shift + L`）、账号密码登录、文章新建/编辑/删除/置顶/隐藏/草稿、封面上传（本地压缩 WebP 后上传服务器）、编辑器内 `.md` 一键解析、综集增删改、评论管理、站点设置（开站日期 + 纪念日 CRUD）、留言置顶/删除、曲库管理、UV 仪表盘、修改密码。**全部走 REST API 落库** |
+| 音乐播放器 | 曲库完全来自后端 `GET /api/music`（含 3 段内置 Web Audio 合成曲，曲谱引擎在前端、曲目列表存数据库）；博主可添加曲目——本地音频上传到后端 `data/uploads` 或填写外链；全局曲库弹窗（Teleport）支持切歌、二次确认删除、超长列表内部滚动与当前曲目高亮 |
 | 签到 | 累计与连续天数、四枚徽章，仅博主可打卡；数据存 MySQL，按 Asia/Shanghai 时区计算 |
-| 统计 | PV/UV 存 Redis（保留 120 天），后台 14 天趋势仪表；文章浏览量累加 |
+| 统计 | PV/UV 存 Redis（保留 120 天 + 热门页面 Top5），后台 14 天趋势仪表；文章浏览量累加；浏览踪迹仅上报后端，不在本机留存 |
 | 404 | 跳过三栏骨架的全宽沉浸页：镂空 404 插画在视口内居中，插画下方为「返回首页 / 翻翻手记」 |
 
 ### 角色权限
 
-- **访客**：浏览公开内容、留言墙发表（受限流与人机校验约束）、点赞、查看日历/倒计时/签到成就、听音乐；看不到任何管理入口。
-- **博主**：账号密码登录后解锁后台；能编辑/发布文章与综集、管理留言墙、上传封面与音频、签到、查看 UV、修改密码。
+- **访客**：浏览公开内容、文章评论与留言墙发表（受限流与人机校验约束）、点赞、查看日历/倒计时/签到成就、听音乐；看不到任何管理入口。
+- **博主**：账号密码登录后解锁后台；能编辑/发布文章与综集、管理评论与留言墙、上传封面与音频、签到、查看 UV、修改密码。
 
 ---
 
@@ -109,14 +110,16 @@ Internet (HTTPS 443)
 | --- | --- | --- |
 | 文章 / 综集 / 分类 | MySQL `blog_post` 等表 | 后台发布落库，公开接口实时返回 |
 | 留言墙 | MySQL `blog_message_board` | 限流 + Turnstile + Jsoup 净化后入库 |
-| 音乐曲库 | MySQL `blog_music` | 本地音频文件在 `data/uploads` |
+| 文章评论 | MySQL `blog_comment` | 同 IP 每分钟 1 条 / 每小时 10 条，楼层式展示 |
+| 音乐曲库 | MySQL `blog_music` | 内置合成曲与上传曲目都在库里；音频文件在 `data/uploads` |
 | 签到记录 | MySQL `blog_checkin` | 连续天数按 Asia/Shanghai 计算 |
-| PV / UV / 限流 / JWT 会话 | Redis | UV 按天 Set 去重，保留 120 天 |
+| 纪念日 / 开站日期 | MySQL `blog_anniversary` / `blog_config` | `GET /api/site` 下发，后台「站点设置」管理 |
+| PV / UV / 热门页面 / 限流 / JWT 会话 | Redis | UV 按天 Set 去重（保留 120 天），页面计数 Hash Top5 |
 | 博主登录态 | `localStorage`（`mgm:api-token`）+ Redis 白名单 | 双向可吊销 |
-| 构建期 Markdown 降级内容 | `content/posts/`（打进前端包） | 后端不可用时的只读兜底 |
+| 点赞 / 播放器音量偏好 | `localStorage`（`mgm:` 前缀） | 访客侧轻量状态，不属于内容数据 |
 
-- 前端在 API 不可用时自动降级为只读模式（`apiReady` 判断），留言/签到/后台给出「无法连接后端」提示；本地失败的操作降级写 localStorage 以便恢复后同步。
-- 数据库 9 张表 DDL 在 `backend/src/main/resources/schema.sql`，种子文章由 `node scripts/gen-seed.mjs` 从 `content/posts/*.md` 生成（`INSERT IGNORE`，不覆盖已有数据）。
+- 前端**没有任何静态内容兜底**：数据库种子 `seed.sql` 由 `node scripts/gen-seed.mjs` 从 `content/posts/*.md` 生成（`INSERT IGNORE`，不覆盖已有数据），`content/` 只作为种子来源，不再参与前端构建。
+- 数据库 12 张表 DDL 在 `backend/src/main/resources/schema.sql`（文章 4 张、综集 2 张、留言 1 张、评论 1 张、音乐 1 张、签到 1 张、纪念日 1 张、站点配置 1 张 + 用户表）。
 
 ---
 
@@ -127,15 +130,15 @@ backend/                   # Spring Boot 工程（xyz.cy666.blog）
   src/main/java/.../       # controller / service / security / mapper / entity / dto
   src/main/resources/      # application*.yml、schema.sql、seed.sql
   Dockerfile               # 多阶段构建（maven → temurin 17-jre）
-content/                   # Markdown 文章与综集定义（构建期降级内容源）
+content/                   # Markdown 文章与综集定义（数据库种子的来源，不参与前端构建）
 deploy/
-  mysql/init/              # 容器首次启动执行的建表 + 种子 SQL
+  mysql/init/              # 容器首次启动只执行建表 SQL（01-schema.sql），不灌数据
   nginx/default.conf       # SPA + /api + /uploads 反代
   nginx/ssl/               # 证书目录（不进仓库）
 docker-compose.yml         # mysql / redis / backend / frontend 四服务
 public/assets/megumin/    # 主题素材（WebP 压缩后）
 public/assets/textures/   # 羊皮纸 / 方格纸 / 星屑纹理与粒子贴图
-scripts/gen-seed.mjs      # Markdown → seed.sql
+scripts/gen-seed.mjs      # Markdown → seed.sql（含站点/纪念日/合成曲种子）
 src/
   api/                     # REST API 客户端（publicApi / adminApi）
   components/
@@ -144,8 +147,8 @@ src/
     layout/               # Header / Footer / 侧栏 / 背景
     post/                 # 文章卡片、Turnstile 组件
     widgets/              # 博主卡、音乐播放器、日历、倒计时、目录
-  data/                   # 站点配置、构建期内容（virtual:content）
-  lib/                    # http（axios）、Frontmatter、Markdown、导出、工具
+  data/                   # 站点品牌配置（标题/博主资料/社交链接）
+  lib/                    # http（axios）、Markdown、导出、工具
   router/  stores/  styles/  views/
 docs/                     # 服务端部署指南、博主身份绑定指南（旧版参考）
 meguminUI/                # 原始素材（不参与构建）
@@ -157,11 +160,12 @@ meguminUI/                # 原始素材（不参与构建）
 
 这一版把数据层从前端/仓库整体迁移到服务端：
 
-- **后端**：Spring Boot 3.3 + MyBatis-Plus + MySQL 8 + Redis 7。公开接口（文章/综集/留言/签到/统计）与管理接口（`/api/admin/**`，JWT 拦截器保护）分离，统一 `ApiResponse{code,message,data}` 响应。
+- **后端**：Spring Boot 3.3 + MyBatis-Plus + MySQL 8 + Redis 7。公开接口（文章/综集/留言/签到/统计/站点信息）与管理接口（`/api/admin/**`，JWT 拦截器保护）分离，统一 `ApiResponse{code,message,data}` 响应。
 - **鉴权升级**：GitHub PAT 模式改为账号密码 + JWT + Redis 会话白名单，支持即时吊销。
 - **留言墙公网化**：原本只是本机 localStorage 便签，现在正式入库，全站可见；限流与 Turnstile 防刷。
 - **上传服务化**：封面/音频上传到服务器 `data/uploads`，Nginx 直接分发，不再走 IndexedDB / base64。
-- **只读降级**：后端不可用时前台用构建期 Markdown（`content/posts/`，构建时同样物理剔除草稿）展示内容，写操作全部禁用并提示。
+- **零静态数据**：删除构建期 Markdown 虚拟模块（`virtual:content`）、本地签到/UV 踪迹、本地曲库与 IndexedDB 音频、静态纪念日配置——文章、日常、踪迹、签到记录、纪念日倒计时、开站日期、曲库全部实时来自后端；localStorage 只保留登录 token、点赞与播放器偏好。
+- **站点设置后台化**：新增 `blog_anniversary` / `blog_config` 表与 `GET /api/site`，后台「站点设置」tab 直接管理开站日期与纪念日。
 - **部署**：Docker Compose 一键拉起 mysql / redis / backend / frontend(nginx)，`/actuator/health` 健康检查。
 
 完整的环境变量、证书申请、备份恢复、排错与安全清单：[**docs/服务端部署指南.md**](docs/服务端部署指南.md)。

@@ -13,13 +13,17 @@ import { useUiStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { useContentStore } from '@/stores/content'
 import { useInteractionStore } from '@/stores/interaction'
+import { usePlayerStore } from '@/stores/player'
 import { useProfileStore } from '@/stores/profile'
+import { useSiteStore } from '@/stores/site'
 
 const ui = useUiStore()
 const auth = useAuthStore()
 const content = useContentStore()
 const interaction = useInteractionStore()
+const player = usePlayerStore()
 const profile = useProfileStore()
+const siteStore = useSiteStore()
 const route = useRoute()
 
 /** 404 等沉浸页跳过三栏骨架，只保留 Header / Footer */
@@ -86,7 +90,13 @@ function onKeydown(event: KeyboardEvent) {
 onMounted(async () => {
   window.addEventListener('keydown', onKeydown)
   await auth.restore()
-  await Promise.allSettled([content.load(), interaction.load(), profile.loadCheckin()])
+  await Promise.allSettled([
+    content.load(),
+    interaction.load(),
+    profile.loadCheckin(),
+    siteStore.load(),
+    player.load(),
+  ])
 })
 
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))

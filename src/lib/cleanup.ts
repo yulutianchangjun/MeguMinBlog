@@ -1,12 +1,12 @@
 import { STORAGE_PREFIX } from '@/lib/storage'
 
 /**
- * 第四版起，内容与评论都不再进 localStorage：
- * - 文章/综集：构建期来自仓库，后台写入 GitHub commit
- * - 评论：GitHub Discussions（giscus）
- * 这里做一次性迁移，清掉旧版本遗留的演示数据与离线登录痕迹。
+ * 第六版起，前端不再保存任何静态内容数据：
+ * - 文章/综集/曲库/签到/UV/纪念日：全部来自后端 REST API
+ * - localStorage 只保留登录 token、点赞、播放器偏好等本机轻量状态
+ * 这里做一次性迁移，清掉旧版本遗留的本地数据缓存。
  */
-const DATA_VERSION = '5'
+const DATA_VERSION = '6'
 const VERSION_KEY = `${STORAGE_PREFIX}data-version`
 
 const LEGACY_KEYS = [
@@ -16,11 +16,13 @@ const LEGACY_KEYS = [
   'auth',
   'nickname',
   'uv',
+  'visitor-id',
   'likes',
   'liked',
   'profile',
   'checkin',
   'board-name',
+  'player',
   'github-token',
   'github-user',
   'turnstile-pass',

@@ -2,13 +2,13 @@
 import { computed } from 'vue'
 import dayjs from 'dayjs'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import { site } from '@/data/site'
-import { siteStartDate } from '@/data/posts'
+import { useSiteStore } from '@/stores/site'
 
+const siteStore = useSiteStore()
 const today = dayjs().startOf('day')
 
 const items = computed(() =>
-  site.anniversaries
+  siteStore.anniversaries
     .map((item) => {
       const target = dayjs(`${today.year()}-${item.date}`)
       const next = target.isBefore(today) ? target.add(1, 'year') : target
@@ -25,7 +25,9 @@ const items = computed(() =>
 
 const primary = computed(() => items.value[0])
 const others = computed(() => items.value.slice(1))
-const openedDays = computed(() => today.diff(dayjs(siteStartDate).startOf('day'), 'day') + 1)
+const openedDays = computed(() =>
+  siteStore.startDate ? today.diff(dayjs(siteStore.startDate).startOf('day'), 'day') + 1 : 0,
+)
 </script>
 
 <template>
@@ -35,7 +37,7 @@ const openedDays = computed(() => today.diff(dayjs(siteStartDate).startOf('day')
       <span class="cn">纪念日倒计时</span>
     </div>
 
-    <div class="cd-body">
+    <div v-if="primary" class="cd-body">
       <div class="primary">
         <span class="label">
           <MagicIcon name="star" :size="12" />
@@ -51,7 +53,7 @@ const openedDays = computed(() => today.diff(dayjs(siteStartDate).startOf('day')
       </div>
 
       <ul class="list">
-        <li v-for="item in others" :key="item.label">
+        <li v-for="item in others" :key="item.id">
           <span class="name">{{ item.label }}</span>
           <span class="days">{{ item.days }}<em>d</em></span>
         </li>
@@ -59,9 +61,13 @@ const openedDays = computed(() => today.diff(dayjs(siteStartDate).startOf('day')
 
       <div class="footer">
         <span>开站第</span>
-        <strong>{{ openedDays }}</strong>
+        <strong>{{ openedDays || '—' }}</strong>
         <span>天</span>
       </div>
+    </div>
+
+    <div v-else class="cd-body empty">
+      <p>{{ siteStore.error || '正在获取倒计时…' }}</p>
     </div>
   </section>
 </template>
@@ -69,6 +75,14 @@ const openedDays = computed(() => today.diff(dayjs(siteStartDate).startOf('day')
 <style scoped>
 .cd-body {
   padding: 16px 18px 18px;
+}
+
+.cd-body.empty p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--c-muted);
+  text-align: center;
 }
 
 .primary {

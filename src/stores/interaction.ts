@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { adminApi, publicApi, type ApiMessage } from '@/api'
 import { apiReady } from '@/lib/http'
-import { readJSON, uid, writeJSON } from '@/lib/storage'
+import { readJSON, writeJSON } from '@/lib/storage'
 import type { BoardMessage, BoardTexture, BoardWall } from '@/types'
 
 function mapMessage(source: ApiMessage): BoardMessage {
@@ -22,34 +22,25 @@ function mapMessage(source: ApiMessage): BoardMessage {
 }
 
 /**
- * 互动：
- * - 留言墙便签：配置后端后写入 MySQL；未配置时退回 localStorage（只读预览）
- * - 点赞仍是本机行为（后端暂未建点赞表）
- * - 文章评论走 GitHub Discussions（giscus），不在这里
+ * 互动数据：
+ * - 留言墙便签：全部来自 MySQL blog_message_board，不再有本地 localStorage 兜底
+ * - 点赞仍是本机行为（后端暂未建点赞表，属于访客侧轻互动）
  */
 export const useInteractionStore = defineStore('interaction', () => {
   const likes = ref<Record<string, number>>(readJSON('likes', {}))
   const liked = ref<Record<string, boolean>>(readJSON('liked', {}))
   const error = ref('')
 
-  const normalizeTexture = (texture: string): BoardTexture =>
-    texture === 'magic' ? 'stars' : (texture as BoardTexture)
-
-  const messages = ref<BoardMessage[]>(
-    readJSON<BoardMessage[]>('messages', []).map((message) => ({
-      ...message,
-      texture: normalizeTexture(message.texture),
-    })),
-  )
-
-  function saveMessages() {
-    if (!apiReady) writeJSON('messages', messages.value)
-  }
+  const messages = ref<BoardMessage[]>([])
 
   async function load(): Promise<void> {
-    if (!apiReady) return
+    if (!apiReady) {
+      error.value = '未配置 VITE_API_BASE_URL，无法加载留言'
+      return
+    }
     try {
       messages.value = (await publicApi.messages()).map(mapMessage)
+      error.value = ''
     } catch (err) {
       error.value = err instanceof Error ? err.message : '留言加载失败'
     }
@@ -87,56 +78,27 @@ export const useInteractionStore = defineStore('interaction', () => {
     },
     turnstileToken = '',
   ): Promise<BoardMessage> {
-    if (apiReady) {
-      const created = await publicApi.createMessage({ ...payload, turnstileToken })
-      const mapped = mapMessage(created)
-      messages.value = [...messages.value, mapped]
-      return mapped
-    }
-    const message: BoardMessage = {
-      id: uid('m-'),
-      author: payload.author.trim() || '匿名旅人',
-      content: payload.content.trim(),
-      createdAt: Date.now(),
-      wall: payload.wall,
-      bgColor: payload.bgColor,
-      fontColor: payload.fontColor,
-      texture: payload.texture,
-      rotation: Number((Math.random() * 5 - 2.5).toFixed(2)),
-    }
-    messages.value = [...messages.value, message]
-    saveMessages()
-    return message
+    if (!apiReady) throw new Error('未连接后端，留言功能需要后端 API')
+    const created = await publicApi.createMessage({ ...payload, turnstileToken })
+    const mapped = mapMessage(created)
+    messages.value = [...messages.value, mapped]
+    return mapped
   }
 
   async function toggleMessagePin(id: string): Promise<void> {
     const message = messages.value.find((item) => item.id === id)
     if (!message) return
-    if (apiReady && message.remoteId) {
-      await adminApi.pinMessage(message.remoteId, !message.pinned)
-    }
+    if (!message.remoteId) throw new Error('这条留言没有后端 ID，无法操作')
+    await adminApi.pinMessage(message.remoteId, !message.pinned)
     messages.value = messages.value.map((m) => (m.id === id ? { ...m, pinned: !m.pinned } : m))
-    saveMessages()
   }
 
   async function deleteMessage(id: string): Promise<void> {
     const message = messages.value.find((item) => item.id === id)
     if (!message) return
-    if (apiReady && message.remoteId) {
-      await adminApi.deleteMessage(message.remoteId)
-    }
+    if (!message.remoteId) throw new Error('这条留言没有后端 ID，无法删除')
+    await adminApi.deleteMessage(message.remoteId)
     messages.value = messages.value.filter((m) => m.id !== id)
-    saveMessages()
-  }
-
-  function importMessages(list: BoardMessage[]): number {
-    const ids = new Set(messages.value.map((m) => m.id))
-    const fresh = list.filter((item) => !ids.has(item.id))
-    if (fresh.length) {
-      messages.value = [...messages.value, ...fresh]
-      saveMessages()
-    }
-    return fresh.length
   }
 
   return {
@@ -151,6 +113,5 @@ export const useInteractionStore = defineStore('interaction', () => {
     addMessage,
     toggleMessagePin,
     deleteMessage,
-    importMessages,
   }
 })

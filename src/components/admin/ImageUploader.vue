@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import { adminApi } from '@/api'
 import { resolveAsset } from '@/lib/asset'
-import { fileToCover, formatBytes } from '@/lib/image'
+import { fileToCoverBlob, formatBytes } from '@/lib/image'
+import { apiReady } from '@/lib/http'
 import { toast } from '@/lib/toast'
 
 const props = withDefaults(
@@ -23,18 +25,27 @@ const dragging = ref(false)
 const meta = ref('')
 
 const preview = computed(() => resolveAsset(props.modelValue))
-const isUploaded = computed(() => props.modelValue.startsWith('data:'))
 
 async function handleFile(file?: File | null) {
   if (!file) return
+  if (!apiReady) {
+    toast.warning('未连接后端，无法上传图片')
+    return
+  }
   processing.value = true
   try {
-    const result = await fileToCover(file)
-    emit('update:modelValue', result.dataUrl)
+    // 1. 本地压缩（长边 1280，WebP）
+    const result = await fileToCoverBlob(file)
+    // 2. 上传到后端，拿到 /uploads/xxx 持久地址
+    const uploadFile = new File([result.blob], `cover.${result.ext}`, {
+      type: result.blob.type,
+    })
+    const uploaded = await adminApi.upload(uploadFile)
+    emit('update:modelValue', uploaded.url)
     meta.value = `${result.width}×${result.height} · ${formatBytes(result.bytes)}`
-    toast.success('封面已就绪，记得点保存')
+    toast.success('封面已上传，记得点保存')
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : '图片处理失败')
+    toast.error(error instanceof Error ? error.message : '图片上传失败')
   } finally {
     processing.value = false
   }
@@ -62,7 +73,7 @@ function clear() {
     <div class="field-head">
       <span>{{ label }}</span>
       <em v-if="meta">{{ meta }}</em>
-      <em v-else-if="modelValue && !isUploaded">当前：{{ modelValue.split('/').pop() }}</em>
+      <em v-else-if="modelValue">当前：{{ modelValue.split('/').pop() }}</em>
     </div>
 
     <div v-if="preview" class="preview-wrap">

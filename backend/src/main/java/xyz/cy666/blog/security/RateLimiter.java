@@ -44,4 +44,31 @@ public class RateLimiter {
             throw BizException.tooMany("本小时的留言次数已用完，请稍后再来");
         }
     }
+
+    /**
+     * 文章评论：同一 IP 每分钟 1 条、每小时 10 条。
+     */
+    public void checkComment(String ip) {
+        long minute = Instant.now().getEpochSecond() / 60;
+        long hour = Instant.now().getEpochSecond() / 3600;
+
+        String minuteKey = "rl:cmt:m:" + ip + ":" + minute;
+        String hourKey = "rl:cmt:h:" + ip + ":" + hour;
+
+        Long minuteCount = redis.opsForValue().increment(minuteKey);
+        if (minuteCount != null && minuteCount == 1L) {
+            redis.expire(minuteKey, Duration.ofMinutes(2));
+        }
+        if (minuteCount != null && minuteCount > 1) {
+            throw BizException.tooMany("评论太快了，请一分钟后再试");
+        }
+
+        Long hourCount = redis.opsForValue().increment(hourKey);
+        if (hourCount != null && hourCount == 1L) {
+            redis.expire(hourKey, Duration.ofHours(2));
+        }
+        if (hourCount != null && hourCount > 10) {
+            throw BizException.tooMany("本小时的评论次数已用完，请稍后再来");
+        }
+    }
 }

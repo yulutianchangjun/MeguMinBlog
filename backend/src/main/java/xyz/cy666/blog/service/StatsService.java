@@ -23,6 +23,7 @@ public class StatsService {
     private static final DateTimeFormatter LABEL = DateTimeFormatter.ofPattern("MM.dd");
     private static final String PV_ALL = "blog:pv:all";
     private static final String UV_ALL = "blog:uv:all";
+    private static final String PAGES_TOP = "blog:pages";
     private static final Duration KEEP = Duration.ofDays(120);
 
     private final StringRedisTemplate redis;
@@ -40,6 +41,8 @@ public class StatsService {
         redis.opsForSet().add(UV_ALL, ip);
         redis.opsForSet().add(uvKey, ip);
         redis.expire(uvKey, KEEP);
+
+        redis.opsForHash().increment(PAGES_TOP, path, 1);
 
         if (StringUtils.hasText(slug)) {
             jdbc.update("UPDATE blog_post SET views = views + 1 WHERE slug = ?", slug);
@@ -62,9 +65,21 @@ public class StatsService {
         }
         long pvTotal = parseLong(redis.opsForValue().get(PV_ALL));
         Long uvTotal = redis.opsForSet().size(UV_ALL);
+        List<UvSummaryView.PageCountView> topPages = topPages();
         UvDayView todayView = series.get(series.size() - 1);
         return new UvSummaryView(pvTotal, uvTotal == null ? 0 : uvTotal,
-                todayView.pv(), todayView.uv(), activeDays, series);
+                todayView.pv(), todayView.uv(), activeDays, topPages, series);
+    }
+
+    private List<UvSummaryView.PageCountView> topPages() {
+        var entries = redis.<String, Object>opsForHash().entries(PAGES_TOP);
+        return entries.entrySet().stream()
+                .map(entry -> new UvSummaryView.PageCountView(
+                        String.valueOf(entry.getKey()),
+                        parseLong(String.valueOf(entry.getValue()))))
+                .sorted((a, b) -> Long.compare(b.count(), a.count()))
+                .limit(5)
+                .toList();
     }
 
     private long parseLong(String value) {

@@ -37,8 +37,6 @@ test-results/
 *.md
 !README.md
 
-# 排除以 .assets 结尾的文件夹（含其内容）
-*.assets/
 
 # 排除 UI 库
 meguminUI/

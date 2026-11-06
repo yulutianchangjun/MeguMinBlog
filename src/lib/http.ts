@@ -1,4 +1,5 @@
 import axios, { type AxiosResponse } from 'axios'
+import { progress } from './progress'
 
 export interface ApiEnvelope<T> {
   code: number
@@ -53,6 +54,7 @@ const client = axios.create({
 })
 
 client.interceptors.request.use((config) => {
+  progress.start()
   const token = tokenStore.get()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
@@ -60,12 +62,23 @@ client.interceptors.request.use((config) => {
   return config
 })
 
+client.interceptors.response.use(
+  (response) => {
+    progress.done()
+    return response
+  },
+  (error) => {
+    progress.done(false)
+    return Promise.reject(error)
+  },
+)
+
 function toError(error: unknown): ApiError {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status ?? 0
     const body = error.response?.data as { message?: string } | undefined
     if (body?.message) return new ApiError(body.message, status)
-    if (status === 0) return new ApiError('无法连接后端服务，请检查 VITE_API_BASE_URL 或网络', 0)
+    if (status === 0) return new ApiError('服务器异常，请联系博主', 0)
     return new ApiError(`请求失败（${status}）`, status)
   }
   return new ApiError(error instanceof Error ? error.message : '请求失败')
@@ -94,6 +107,14 @@ export const http = {
   upload: <T>(url: string, file: File) => {
     const form = new FormData()
     form.append('file', file)
-    return unwrap<T>(client.post(url, form, { headers: { 'Content-Type': 'multipart/form-data' } }))
+    return unwrap<T>(
+      client.post(url, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (event) => {
+          // 上传阶段注入真实进度；封顶 95%，剩余留给服务端落盘与响应
+          if (event.total) progress.set((event.loaded / event.total) * 95)
+        },
+      }),
+    )
   },
 }

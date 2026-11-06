@@ -14,7 +14,6 @@ public class AppProperties {
     private String uploadUrlPrefix = "/uploads";
 
     private Jwt jwt = new Jwt();
-    private Admin admin = new Admin();
     private Turnstile turnstile = new Turnstile();
     private Cors cors = new Cors();
 
@@ -23,13 +22,6 @@ public class AppProperties {
         /** HS256 密钥，至少 32 字节 */
         private String secret = "dev-only-secret-change-me-0123456789abcdef";
         private int ttlDays = 7;
-    }
-
-    @Data
-    public static class Admin {
-        private String username = "admin";
-        private String password = "Explosion@2026";
-        private String nickname = "云汀凫";
     }
 
     @Data

@@ -1,15 +1,17 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import { site } from '@/data/site'
-import { siteStartDate } from '@/data/posts'
 import { formatDate } from '@/lib/format'
 import { useContentStore } from '@/stores/content'
 import { useInteractionStore } from '@/stores/interaction'
 import { useProfileStore } from '@/stores/profile'
+import { useSiteStore } from '@/stores/site'
 
 const content = useContentStore()
 const interaction = useInteractionStore()
 const profile = useProfileStore()
+const siteStore = useSiteStore()
 
 const attributes = [
   { label: '爆裂魔法', en: 'Explosion', value: 100 },
@@ -19,12 +21,14 @@ const attributes = [
   { label: '家务技能', en: 'Chores', value: 6 },
 ]
 
-const timeline = [
+const timeline = computed(() => [
   { date: '红魔之里', title: '出生在一个全是怪人的村子', desc: '第一天就哭得比谁都响。' },
   { date: '某年夏', title: '第一次看见爆裂魔法', desc: '山丘消失了，我决定这就是我要花一辈子的东西。' },
   { date: '来到阿克塞尔', title: '带着一顶帽子和一枚硬币出发', desc: '队友换了好几个，帽子一直没换。' },
-  { date: formatDate(siteStartDate, 'YYYY'), title: '开始写这本手记', desc: '因为每次爆炸之后，总有些东西想留下来。' },
-]
+  ...(siteStore.startDate
+    ? [{ date: formatDate(siteStore.startDate, 'YYYY'), title: '开始写这本手记', desc: '因为每次爆炸之后，总有些东西想留下来。' }]
+    : []),
+])
 
 const stack = [
   { name: 'Vue 3', desc: '组合式 API' },
@@ -33,8 +37,8 @@ const stack = [
   { name: 'Pinia', desc: '状态管理' },
   { name: 'Vue Router', desc: '路由与状态持久化' },
   { name: 'Naive UI', desc: '组件库' },
-  { name: 'Markdown', desc: '内容源' },
-  { name: 'GitHub Pages', desc: '静态托管' },
+  { name: 'Spring Boot', desc: '服务端' },
+  { name: 'MySQL + Redis', desc: '数据与统计' },
 ]
 </script>
 

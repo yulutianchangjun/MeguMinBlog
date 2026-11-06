@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { NDrawer, NPopconfirm } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import ImageUploader from '@/components/admin/ImageUploader.vue'
-import { siteStartDate } from '@/data/posts'
+import { adminApi, type ApiComment } from '@/api'
 import { exportJson, exportZip, parseImportFile } from '@/lib/exporter'
 import { formatDate } from '@/lib/format'
 import { API_BASE, apiReady } from '@/lib/http'
@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useContentStore } from '@/stores/content'
 import { useInteractionStore } from '@/stores/interaction'
 import { useProfileStore } from '@/stores/profile'
+import { useSiteStore, type SiteAnniversary } from '@/stores/site'
 import { useUiStore } from '@/stores/ui'
 import type { AdminTab } from '@/stores/ui'
 import type { Collection, Post } from '@/types'
@@ -26,6 +27,7 @@ const content = useContentStore()
 const interaction = useInteractionStore()
 const profile = useProfileStore()
 const auth = useAuthStore()
+const siteStore = useSiteStore()
 const router = useRouter()
 
 const show = computed({
@@ -36,6 +38,8 @@ const show = computed({
 const tabs: { key: AdminTab; label: string; en: string; icon: string }[] = [
   { key: 'posts', label: '文章管理', en: 'Posts', icon: 'book' },
   { key: 'collections', label: '综集管理', en: 'Series', icon: 'layers' },
+  { key: 'comments', label: '评论管理', en: 'Comments', icon: 'comment' },
+  { key: 'site', label: '站点设置', en: 'Site', icon: 'star' },
   { key: 'data', label: '导入导出', en: 'Data', icon: 'upload' },
   { key: 'stats', label: '数据仪表', en: 'Stats', icon: 'eye' },
 ]
@@ -47,12 +51,112 @@ const tagText = ref('')
 const preview = ref(false)
 const saving = ref(false)
 const importing = ref(false)
-const importLog = ref<{ name: string; posts: number; messages: number }[]>([])
+const importLog = ref<{ name: string; posts: number; skippedMessages: number }[]>([])
+
+// —— 评论管理 ——
+const comments = ref<ApiComment[]>([])
+const commentsLoading = ref(false)
+
+async function loadComments() {
+  if (!auth.isAdmin) return
+  commentsLoading.value = true
+  try {
+    comments.value = await adminApi.comments()
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '评论加载失败')
+  } finally {
+    commentsLoading.value = false
+  }
+}
+
+function postTitleOf(postId: number): string {
+  const post = content.allPosts.find((item) => item.remoteId === postId)
+  return post?.title ?? `文章 #${postId}`
+}
+
+async function removeComment(id: number) {
+  try {
+    await adminApi.deleteComment(id)
+    comments.value = comments.value.filter((item) => item.id !== id)
+    toast.success('评论已删除')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '删除失败')
+  }
+}
 const fileInput = ref<HTMLInputElement | null>(null)
 const mdInput = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
 const collectionDraft = ref<Collection | null>(null)
 const collectionIsNew = ref(false)
+
+const anniversaryDraft = ref<SiteAnniversary | null>(null)
+const anniversaryIsNew = ref(false)
+const startDateInput = ref('')
+const savingSite = ref(false)
+
+const exportStartDate = computed(() => siteStore.startDate || today())
+
+async function saveStartDate() {
+  const value = startDateInput.value.trim()
+  if (!value) {
+    toast.warning('请填写开站日期')
+    return
+  }
+  savingSite.value = true
+  try {
+    await siteStore.saveStartDate(value)
+    toast.success('开站日期已更新')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '保存失败')
+  } finally {
+    savingSite.value = false
+  }
+}
+
+function newAnniversary() {
+  anniversaryIsNew.value = true
+  anniversaryDraft.value = { id: 0, label: '', date: '', note: '', sort: 99 }
+}
+
+function editAnniversary(item: SiteAnniversary) {
+  anniversaryIsNew.value = false
+  anniversaryDraft.value = { ...item }
+}
+
+async function saveAnniversaryDraft() {
+  const draft = anniversaryDraft.value
+  if (!draft) return
+  if (!draft.label.trim()) {
+    toast.warning('请填写纪念日名称')
+    return
+  }
+  if (!/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(draft.date.trim())) {
+    toast.warning('日期格式应为 MM-DD，例如 11-30')
+    return
+  }
+  savingSite.value = true
+  try {
+    await siteStore.saveAnniversary(
+      { ...draft, label: draft.label.trim(), date: draft.date.trim(), note: draft.note.trim() },
+      anniversaryIsNew.value,
+    )
+    anniversaryDraft.value = null
+    toast.success(anniversaryIsNew.value ? '纪念日已添加' : '纪念日已更新')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '保存失败')
+  } finally {
+    savingSite.value = false
+  }
+}
+
+async function removeAnniversary(item: SiteAnniversary) {
+  try {
+    await siteStore.deleteAnniversary(item.id)
+    toast.success(`已删除「${item.label}」`)
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '删除失败')
+  }
+}
 
 const totalLikes = computed(() =>
   content.allPosts.reduce((sum, post) => sum + interaction.likeTotal(post.id), 0),
@@ -93,6 +197,12 @@ function switchTab(tab: AdminTab) {
   ui.adminTab = tab
   if (tab === 'stats' && auth.isAdmin) {
     void profile.loadUv()
+  }
+  if (tab === 'comments') {
+    void loadComments()
+  }
+  if (tab === 'site') {
+    startDateInput.value = siteStore.startDate
   }
 }
 
@@ -216,7 +326,7 @@ async function remove(post: Post) {
 async function togglePostFlag(post: Post, flag: 'pinned' | 'hidden' | 'draft') {
   try {
     await content.toggleFlag(post.id, flag)
-    toast.success('已提交到 GitHub')
+    toast.success('设置已保存')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : '提交失败')
   }
@@ -297,7 +407,7 @@ async function saveCollectionDraft() {
     await content.saveCollection(payload)
     collectionDraft.value = null
     collectionIsNew.value = false
-    toast.success('综集已提交到 GitHub')
+    toast.success('综集已保存')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : '提交失败')
   }
@@ -322,7 +432,7 @@ async function doExportZip() {
     posts: content.allPosts,
     collections: content.collections,
     messages: interaction.messages,
-    siteStartDate,
+    siteStartDate: exportStartDate.value,
   })
   toast.success('ZIP 已生成，包含全部 Markdown 与互动备份')
 }
@@ -332,7 +442,7 @@ function doExportJson() {
     posts: content.allPosts,
     collections: content.collections,
     messages: interaction.messages,
-    siteStartDate,
+    siteStartDate: exportStartDate.value,
   })
   toast.success('JSON 已导出')
 }
@@ -343,27 +453,24 @@ async function handleFiles(files: FileList | File[]) {
   importing.value = true
   importLog.value = []
   let posts = 0
-  let messages = 0
   let failed = false
   for (const file of list) {
     try {
       const result = await parseImportFile(file)
       const addedPosts = await content.importPosts(result.posts)
-      const addedMessages = interaction.importMessages(result.messages)
       posts += addedPosts
-      messages += addedMessages
-      importLog.value.push({ name: file.name, posts: addedPosts, messages: addedMessages })
+      importLog.value.push({ name: file.name, posts: addedPosts, skippedMessages: result.messages.length })
     } catch (error) {
       failed = true
       const reason = error instanceof Error ? error.message : '解析失败'
-      importLog.value.push({ name: `${file.name} · ${reason}`, posts: 0, messages: 0 })
+      importLog.value.push({ name: `${file.name} · ${reason}`, posts: 0, skippedMessages: 0 })
     }
   }
   importing.value = false
-  if (posts || messages) {
-    toast.success(`导入完成：${posts} 篇手记已提交 / ${messages} 张卡片`)
+  if (posts) {
+    toast.success(`导入完成：${posts} 篇手记已提交到后端`)
   } else if (failed) {
-    toast.error('导入未提交任何文章，请检查登录状态与仓库权限')
+    toast.error('导入未提交任何文章，请检查登录状态与后端连接')
   } else {
     toast.warning('没有识别到可导入的内容')
   }
@@ -428,7 +535,7 @@ function logout() {
           </span>
           <div>
             <strong>管理面板</strong>
-            <span>@{{ auth.login || '博主' }}<template v-if="auth.user"> · UID {{ auth.user.id }}</template> · GitHub 已验证</span>
+            <span>@{{ auth.login || '博主' }}<template v-if="auth.user"> · UID {{ auth.user.id }}</template> · 已登录</span>
           </div>
         </div>
         <div class="head-right">
@@ -593,7 +700,7 @@ function logout() {
                     <template #trigger>
                       <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
                     </template>
-                    删除《{{ post.title }}》？会向 GitHub 提交删除 commit，部署后从站点消失。
+                    删除《{{ post.title }}》？删除后立即从站点消失。
                   </n-popconfirm>
                 </div>
               </li>
@@ -685,13 +792,142 @@ function logout() {
           </template>
         </template>
 
+        <!-- 评论管理 -->
+        <template v-else-if="ui.adminTab === 'comments'">
+          <div class="toolbar">
+            <div class="summary">
+              <span><strong>{{ comments.length }}</strong> 条评论</span>
+              <button class="btn-magic small" :disabled="commentsLoading" @click="loadComments">
+                <MagicIcon name="refresh" :size="13" />
+                {{ commentsLoading ? '加载中…' : '刷新' }}
+              </button>
+            </div>
+          </div>
+
+          <p v-if="!commentsLoading && !comments.length" class="empty-tip">
+            还没有评论。文章页的评论区发表后会出现在这里。
+          </p>
+
+          <ul class="post-list">
+            <li v-for="item in comments" :key="item.id" class="post-row comment-row">
+              <div class="row-main">
+                <div class="row-title">
+                  <strong>{{ item.author }}</strong>
+                  <span class="badge gold">{{ postTitleOf(item.postId) }}</span>
+                </div>
+                <div class="row-meta">
+                  <span class="comment-text">{{ item.content }}</span>
+                </div>
+                <div class="row-meta">
+                  <span>{{ formatDate(item.createdAt) }}</span>
+                </div>
+              </div>
+              <div class="row-actions">
+                <n-popconfirm @positive-click="removeComment(item.id)">
+                  <template #trigger>
+                    <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
+                  </template>
+                  删除 {{ item.author }} 的这条评论？
+                </n-popconfirm>
+              </div>
+            </li>
+          </ul>
+        </template>
+
+        <!-- 站点设置 -->
+        <template v-else-if="ui.adminTab === 'site'">
+          <div class="editor">
+            <label class="field">
+              <span>开站日期</span>
+              <input v-model="startDateInput" type="date" />
+            </label>
+            <button class="btn-magic small" :disabled="savingSite" @click="saveStartDate">
+              <MagicIcon name="check" :size="13" />
+              {{ savingSite ? '保存中…' : '保存开站日期' }}
+            </button>
+            <p class="editor-tip">
+              <MagicIcon name="spark" :size="11" />
+              用于右侧栏「开站第 N 天」与关于页时间线。
+            </p>
+          </div>
+
+          <template v-if="anniversaryDraft">
+            <div class="editor-head">
+              <button class="back" @click="anniversaryDraft = null">
+                <MagicIcon name="arrowLeft" :size="13" />
+                返回列表
+              </button>
+              <span class="editor-title">{{ anniversaryIsNew ? '添加纪念日' : '编辑纪念日' }}</span>
+              <button class="btn-magic small" :disabled="savingSite" @click="saveAnniversaryDraft">
+                <MagicIcon name="check" :size="13" />
+                保存
+              </button>
+            </div>
+
+            <div class="editor">
+              <label class="field">
+                <span>名称</span>
+                <input v-model="anniversaryDraft.label" placeholder="例如：云汀凫的生日" />
+              </label>
+              <label class="field">
+                <span>日期（MM-DD，每年循环）</span>
+                <input v-model="anniversaryDraft.date" placeholder="11-30" />
+              </label>
+              <label class="field">
+                <span>备注</span>
+                <input v-model="anniversaryDraft.note" placeholder="显示在倒计时卡片下方" />
+              </label>
+              <label class="field">
+                <span>排序（小的靠前）</span>
+                <input v-model.number="anniversaryDraft.sort" type="number" min="0" max="99" />
+              </label>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="toolbar">
+              <div class="summary">
+                <span><strong>{{ siteStore.anniversaries.length }}</strong> 个纪念日</span>
+              </div>
+              <button class="btn-magic small" @click="newAnniversary">
+                <MagicIcon name="plus" :size="13" />
+                添加纪念日
+              </button>
+            </div>
+
+            <ul class="post-list">
+              <li v-for="item in siteStore.anniversaries" :key="item.id" class="post-row">
+                <div class="row-main">
+                  <div class="row-title">
+                    <strong>{{ item.label }}</strong>
+                    <span class="badge gold">{{ item.date }}</span>
+                  </div>
+                  <div class="row-meta">
+                    <span>{{ item.note || '未设备注' }}</span>
+                    <span>排序 {{ item.sort }}</span>
+                  </div>
+                </div>
+                <div class="row-actions">
+                  <button title="编辑" @click="editAnniversary(item)"><MagicIcon name="edit" :size="13" /></button>
+                  <n-popconfirm @positive-click="removeAnniversary(item)">
+                    <template #trigger>
+                      <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
+                    </template>
+                    删除「{{ item.label }}」？
+                  </n-popconfirm>
+                </div>
+              </li>
+            </ul>
+          </template>
+        </template>
+
         <!-- 导入导出 -->
         <template v-else-if="ui.adminTab === 'data'">
           <div class="data-grid">
             <section class="data-card">
               <span class="data-icon"><MagicIcon name="download" :size="18" /></span>
               <h3>导出全量内容</h3>
-              <p>把全部已发布手记打包成 Markdown（含 Frontmatter），附综集与留言墙备份；评论在 GitHub，不在包里。</p>
+              <p>把全部已发布手记打包成 Markdown（含 Frontmatter）</p>
               <div class="data-actions">
                 <button class="btn-magic small" @click="doExportZip">
                   <MagicIcon name="download" :size="13" />
@@ -707,7 +943,7 @@ function logout() {
             <section class="data-card">
               <span class="data-icon"><MagicIcon name="upload" :size="18" /></span>
               <h3>导入内容</h3>
-              <p>支持单个 / 多个 .md、标准结构 .json 与完整 ZIP。导入会逐篇提交到 GitHub，同名文章被覆盖。</p>
+              <p>支持单个 / 多个 .md、标准结构 .json 与完整 ZIP。导入会逐篇提交，同名文章被覆盖。</p>
               <div
                 class="dropzone"
                 :class="{ over: dragOver }"
@@ -729,53 +965,23 @@ function logout() {
             <div v-for="(item, i) in importLog" :key="i" class="log-row">
               <span class="log-name">{{ item.name }}</span>
               <span>{{ item.posts }} 篇</span>
-              <span>{{ item.messages }} 卡片</span>
+              <span v-if="item.skippedMessages">跳过 {{ item.skippedMessages }} 条留言</span>
             </div>
           </section>
 
           <section class="storage">
             <div class="storage-row">
               <div>
-                <span>后端 API</span>
-                <strong>{{ apiConfigured ? apiBase : '未配置（只读静态模式）' }}</strong>
-              </div>
-              <div>
                 <span>当前数据</span>
                 <strong>{{ content.allPosts.length }} 篇 · {{ content.collections.length }} 综集 · {{ interaction.messages.length }} 便签</strong>
               </div>
             </div>
 
-            <p v-if="!apiConfigured" class="repo-probe bad">
-              <MagicIcon name="lock" :size="11" />
-              未配置 VITE_API_BASE_URL：前台只读，后台保存会失败。请按 docs/服务端部署指南.md 启动后端。
-            </p>
-            <p v-else class="repo-probe">
-              <MagicIcon name="check" :size="11" />
-              {{ content.loading ? '正在与后端同步…' : '已连接后端，数据来自 MySQL；本机不再保存文章覆盖层' }}
-            </p>
             <p v-if="content.lastAction" class="repo-probe">
               <MagicIcon name="refresh" :size="11" />
               最近操作：{{ content.lastAction.message }}（本次会话 {{ content.mutations }} 次）
             </p>
 
-            <div class="danger-zone">
-              <button class="btn-magic ghost small" :disabled="reloading" @click="reloadAll">
-                <MagicIcon name="refresh" :size="12" />
-                {{ reloading ? '同步中…' : '重新拉取数据' }}
-              </button>
-              <n-popconfirm @positive-click="resetOverlay">
-                <template #trigger>
-                  <button class="btn-magic ghost small">丢弃本机会话状态</button>
-                </template>
-                重新从后端读取文章、综集与留言，不会删除数据库内容。
-              </n-popconfirm>
-              <n-popconfirm @positive-click="clearAll">
-                <template #trigger>
-                  <button class="btn-magic ghost small danger">清空本机缓存</button>
-                </template>
-                本机点赞、访客统计与旧版缓存会被清空；MySQL 里的文章、留言不受影响。
-              </n-popconfirm>
-            </div>
           </section>
         </template>
 
@@ -837,7 +1043,7 @@ function logout() {
               <div class="mini-head">内容与互动</div>
               <ul class="rank">
                 <li><span class="rank-num">篇</span><span class="rank-path">公开手记</span><em>{{ content.publicPosts.length }}</em></li>
-                <li><span class="rank-num">论</span><span class="rank-path">评论存储</span><em>GitHub</em></li>
+                <li><span class="rank-num">论</span><span class="rank-path">评论存储</span><em>本站数据库</em></li>
                 <li><span class="rank-num">卡</span><span class="rank-path">留言卡片</span><em>{{ interaction.messages.length }}</em></li>
                 <li><span class="rank-num">赞</span><span class="rank-path">累计点赞</span><em>{{ totalLikes }}</em></li>
                 <li><span class="rank-num">签</span><span class="rank-path">累计签到 / 连续</span><em>{{ profile.totalDays }} / {{ profile.streak }}</em></li>
@@ -1020,6 +1226,30 @@ function logout() {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.empty-tip {
+  margin: 24px 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--c-muted);
+}
+
+.comment-row {
+  align-items: flex-start;
+}
+
+.comment-row .comment-text {
+  max-width: 420px;
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--c-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .post-row {

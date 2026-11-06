@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import TurnstileWidget from '@/components/post/TurnstileWidget.vue'
-import { discussionsUrl, site } from '@/data/site'
+import { site } from '@/data/site'
 import { formatDate } from '@/lib/format'
 import { apiReady } from '@/lib/http'
 import { toast } from '@/lib/toast'
@@ -314,17 +314,6 @@ onMounted(() => {
           三面墙，每面一次只钉 5 张。钉满之后这一批会封存进档案，新的卡片重新开始——
           后浪覆前浪，但旧的字不会消失。
         </p>
-        <div class="head-links">
-          <a :href="discussionsUrl" target="_blank" rel="noopener noreferrer" class="public-link">
-            <MagicIcon name="github" :size="12" />
-            公开留言 · GitHub Discussions
-            <MagicIcon name="external" :size="10" />
-          </a>
-          <span class="local-hint">
-            <MagicIcon name="lock" :size="10" />
-            三面软木板是本机便签，只存在当前浏览器
-          </span>
-        </div>
       </div>
       <div class="head-stats">
         <div><strong>{{ totalCards }}</strong><span>张卡片</span></div>
@@ -529,7 +518,7 @@ onMounted(() => {
 
             <div v-else key="info" class="board-info">
               <span class="info-rune">MAGIC BOARD</span>
-              <h2>三面钉板</h2>
+              <h2>钉板</h2>
               <p>
                 每面墙一批 5 张。选一面还没钉满的墙，挑一种纸色，写下你的名字。
               </p>
@@ -564,10 +553,6 @@ onMounted(() => {
                 <MagicIcon name="lock" :size="10" />
                 置顶与取下仅博主可用
               </p>
-              <a :href="discussionsUrl" target="_blank" rel="noopener noreferrer" class="hint public">
-                <MagicIcon name="github" :size="10" />
-                想让所有人看到？去 GitHub Discussions 留言
-              </a>
             </div>
           </transition>
         </div>

@@ -107,3 +107,32 @@ CREATE TABLE IF NOT EXISTS blog_checkin (
   PRIMARY KEY (id),
   UNIQUE KEY uk_checkin_date (checkin_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_anniversary (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  label VARCHAR(64) NOT NULL COMMENT '纪念日名称',
+  memorial_date VARCHAR(8) NOT NULL COMMENT 'MM-DD，每年循环',
+  note VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
+  sort INT NOT NULL DEFAULT 99,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_anniversary_sort (sort)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_config (
+  config_key VARCHAR(64) NOT NULL,
+  config_value VARCHAR(255) NOT NULL,
+  PRIMARY KEY (config_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS blog_comment (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  post_id BIGINT UNSIGNED NOT NULL,
+  author VARCHAR(64) NOT NULL,
+  content VARCHAR(1200) NOT NULL,
+  ip VARCHAR(64) DEFAULT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'approved',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_comment_post (post_id, status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

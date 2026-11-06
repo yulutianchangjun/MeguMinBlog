@@ -53,7 +53,7 @@ function onVolume(event: Event) {
 }
 
 onMounted(() => {
-  void player.hydrate()
+  void player.load()
 })
 </script>
 
@@ -155,11 +155,9 @@ onMounted(() => {
 
     <PlaylistModal v-model:show="listOpen" />
 
-    <p v-if="player.error" class="error">{{ player.error }}</p>
-
     <p class="note">
-      <template v-if="player.customCount">本地音频缓存在 IndexedDB · 外链仅保存地址</template>
-      <template v-else>Web Audio 实时合成 · 无需外部音频文件</template>
+      <template v-if="player.customCount">曲库来自后端 · 上传的音频保存在服务器</template>
+      <template v-else>曲库来自后端 · 合成曲由 Web Audio 实时播放</template>
     </p>
 
     <AddMusicModal v-model:show="addOpen" />

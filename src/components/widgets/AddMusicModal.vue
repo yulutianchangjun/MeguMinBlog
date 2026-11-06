@@ -87,13 +87,15 @@ async function addLocal() {
 }
 
 function addRemote() {
-  const track = player.addUrl(urlForm.value)
-  if (!track) {
-    toast.warning(player.error || '请检查表单')
-    return
-  }
-  visible.value = false
-  toast.success(`已加入播放列表：${track.title}`)
+  void (async () => {
+    const track = await player.addUrl(urlForm.value)
+    if (!track) {
+      toast.warning(player.error || '请检查表单')
+      return
+    }
+    visible.value = false
+    toast.success(`已加入播放列表：${track.title}`)
+  })()
 }
 </script>
 
@@ -109,7 +111,7 @@ function addRemote() {
         <div>
           <span class="eyebrow">Playlist · 添加音乐</span>
           <h2>往留声机里放一张唱片</h2>
-          <p>本地文件会缓存在这台设备；外链只保存地址，不会上传任何内容。</p>
+          <p>本地文件会上传到服务器（30MB 以内）；外链只保存地址。曲目会进入全站曲库。</p>
         </div>
       </div>
 

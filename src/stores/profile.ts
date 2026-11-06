@@ -2,66 +2,23 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { adminApi, publicApi, type ApiCheckin, type ApiUv } from '@/api'
 import { apiReady } from '@/lib/http'
-import { readJSON, uid, writeJSON } from '@/lib/storage'
 
-export interface CheckinState {
-  dates: string[]
-  total: number
-}
-
-interface UvDay {
-  date: string
-  pv: number
-  visitors: string[]
-  views: Record<string, number>
-}
-
-interface UvState {
-  days: Record<string, UvDay>
-}
-
-const dayKey = (date = new Date()) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-
-const shiftDay = (iso: string, delta: number): string => {
-  const [y, m, d] = iso.split('-').map(Number)
-  const date = new Date(y, m - 1, d)
-  date.setDate(date.getDate() + delta)
-  return dayKey(date)
-}
-
+/**
+ * 博主动态数据：签到记录与浏览踪迹（PV/UV）全部来自后端。
+ * - 签到：MySQL blog_checkin（连续天数按 Asia/Shanghai 计算）
+ * - 踪迹：Redis 统计（保留 120 天），后端不可用时一律显示为 0
+ */
 export const useProfileStore = defineStore('profile', () => {
-  const checkin = ref<CheckinState>(readJSON<CheckinState>('checkin', { dates: [], total: 0 }))
-  const uv = ref<UvState>(readJSON<UvState>('uv', { days: {} }))
-  const visitorId = ref<string>(readJSON<string>('visitor-id', ''))
-  const today = ref(dayKey())
   const remoteCheckin = ref<ApiCheckin | null>(null)
   const remoteUv = ref<ApiUv | null>(null)
+  const loading = ref(false)
 
-  if (!visitorId.value) {
-    visitorId.value = uid('v-')
-    writeJSON('visitor-id', visitorId.value)
-  }
+  const checkedToday = computed(() => remoteCheckin.value?.checkedToday ?? false)
+  const streak = computed(() => remoteCheckin.value?.streak ?? 0)
+  const totalDays = computed(() => remoteCheckin.value?.total ?? 0)
 
-  const checkedToday = computed(() =>
-    remoteCheckin.value ? remoteCheckin.value.checkedToday : checkin.value.dates.includes(today.value),
-  )
-
-  const streak = computed(() => {
-    if (remoteCheckin.value) return remoteCheckin.value.streak
-    const set = new Set(checkin.value.dates)
-    let cursor = set.has(today.value) ? today.value : shiftDay(today.value, -1)
-    let count = 0
-    while (set.has(cursor)) {
-      count += 1
-      cursor = shiftDay(cursor, -1)
-    }
-    return count
-  })
-
-  const totalDays = computed(() =>
-    remoteCheckin.value ? remoteCheckin.value.total : checkin.value.total || checkin.value.dates.length,
-  )
+  /** 签到日历（含全部历史日期），后端返回 */
+  const checkinDates = computed<string[]>(() => remoteCheckin.value?.dates ?? [])
 
   const badges = computed(() => [
     { key: 'spark', label: '初燃', desc: '首次签到', threshold: 1, icon: 'spark' },
@@ -82,29 +39,26 @@ export const useProfileStore = defineStore('profile', () => {
   })
 
   async function doCheckin(): Promise<{ ok: boolean; streak: number; message?: string }> {
-    if (apiReady) {
-      try {
-        remoteCheckin.value = await adminApi.checkin()
-        return { ok: true, streak: remoteCheckin.value.streak }
-      } catch (err) {
-        return { ok: false, streak: streak.value, message: err instanceof Error ? err.message : '签到失败' }
-      }
+    if (!apiReady) {
+      return { ok: false, streak: streak.value, message: '未连接后端，无法签到' }
     }
-    if (checkedToday.value) return { ok: false, streak: streak.value }
-    checkin.value = {
-      dates: [...checkin.value.dates, today.value],
-      total: checkin.value.total + 1,
+    try {
+      remoteCheckin.value = await adminApi.checkin()
+      return { ok: true, streak: remoteCheckin.value.streak }
+    } catch (err) {
+      return { ok: false, streak: streak.value, message: err instanceof Error ? err.message : '签到失败' }
     }
-    writeJSON('checkin', checkin.value)
-    return { ok: true, streak: streak.value }
   }
 
   async function loadCheckin(): Promise<void> {
     if (!apiReady) return
+    loading.value = true
     try {
       remoteCheckin.value = await publicApi.checkin()
     } catch {
-      /* 后端不可用时保留本地统计 */
+      remoteCheckin.value = null
+    } finally {
+      loading.value = false
     }
   }
 
@@ -117,37 +71,14 @@ export const useProfileStore = defineStore('profile', () => {
     }
   }
 
+  /** 浏览踪迹上报（fire-and-forget，仅发给后端 Redis 统计） */
   function track(path: string) {
-    if (apiReady) {
-      const slug = path.startsWith('/posts/') ? path.slice('/posts/'.length) : undefined
-      void publicApi.track(path, slug).catch(() => undefined)
-    }
-    const key = today.value
-    const state = uv.value
-    const entry = state.days[key] ?? { date: key, pv: 0, visitors: [], views: {} }
-    entry.pv += 1
-    if (!entry.visitors.includes(visitorId.value)) entry.visitors.push(visitorId.value)
-    entry.views[path] = (entry.views[path] ?? 0) + 1
-    state.days[key] = entry
-    uv.value = { days: { ...state.days } }
-    writeJSON('uv', uv.value)
+    if (!apiReady) return
+    const slug = path.startsWith('/posts/') ? path.slice('/posts/'.length) : undefined
+    void publicApi.track(path, slug).catch(() => undefined)
   }
 
-  const uvSeries = computed(() => {
-    if (remoteUv.value) return remoteUv.value.series
-    const series: { date: string; label: string; pv: number; uv: number }[] = []
-    for (let i = 13; i >= 0; i -= 1) {
-      const key = shiftDay(today.value, -i)
-      const entry = uv.value.days[key]
-      series.push({
-        date: key,
-        label: key.slice(5),
-        pv: entry?.pv ?? 0,
-        uv: entry?.visitors.length ?? 0,
-      })
-    }
-    return series
-  })
+  const uvSeries = computed(() => remoteUv.value?.series ?? [])
 
   const uvSummary = computed(() => {
     if (remoteUv.value) {
@@ -156,40 +87,19 @@ export const useProfileStore = defineStore('profile', () => {
         uv: remoteUv.value.uv,
         todayPv: remoteUv.value.todayPv,
         todayUv: remoteUv.value.todayUv,
-        topPages: [] as { path: string; count: number }[],
+        topPages: remoteUv.value.topPages ?? [],
         activeDays: remoteUv.value.activeDays,
       }
     }
-    const days = Object.values(uv.value.days)
-    const visitors = new Set<string>()
-    let pv = 0
-    const views: Record<string, number> = {}
-    for (const entry of days) {
-      pv += entry.pv
-      entry.visitors.forEach((v) => visitors.add(v))
-      for (const [path, count] of Object.entries(entry.views)) {
-        views[path] = (views[path] ?? 0) + count
-      }
-    }
-    const topPages = Object.entries(views)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([path, count]) => ({ path, count }))
-    return {
-      pv,
-      uv: visitors.size,
-      todayPv: uv.value.days[today.value]?.pv ?? 0,
-      todayUv: uv.value.days[today.value]?.visitors.length ?? 0,
-      topPages,
-      activeDays: days.filter((d) => d.pv > 0).length,
-    }
+    return { pv: 0, uv: 0, todayPv: 0, todayUv: 0, topPages: [], activeDays: 0 }
   })
 
   return {
-    checkin,
+    loading,
     checkedToday,
     streak,
     totalDays,
+    checkinDates,
     badges,
     nextBadge,
     doCheckin,
@@ -198,6 +108,5 @@ export const useProfileStore = defineStore('profile', () => {
     track,
     uvSeries,
     uvSummary,
-    today,
   }
 })

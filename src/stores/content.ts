@@ -8,7 +8,6 @@ import {
   type CollectionPayload,
   type PostPayload,
 } from '@/api'
-import { seedCollections, seedPosts, siteStartDate } from '@/data/posts'
 import { apiReady } from '@/lib/http'
 import { useAuthStore } from '@/stores/auth'
 import type { Collection, Post } from '@/types'
@@ -75,9 +74,8 @@ function toPayload(post: Post, withSlug: boolean): PostPayload {
 }
 
 /**
- * 内容仓库：
- * - 配置了 VITE_API_BASE_URL 时，全部数据来自 Spring Boot REST API
- * - 未配置后端时退回构建期 Markdown（只读静态预览）
+ * 内容仓库：文章与综集全部来自 Spring Boot REST API，不再保留任何构建期静态数据。
+ * 后端不可用时列表为空，页面展示「无法连接后端」的错误态。
  */
 export const useContentStore = defineStore('content', () => {
   const auth = useAuthStore()
@@ -85,13 +83,13 @@ export const useContentStore = defineStore('content', () => {
   const remotePosts = ref<Post[] | null>(null)
   const remoteCollections = ref<Collection[] | null>(null)
   const loading = ref(false)
-  const loaded = ref(!apiReady)
+  const loaded = ref(false)
   const error = ref('')
   const lastAction = ref<{ message: string; at: number } | null>(null)
   const mutations = ref(0)
 
-  const allPosts = computed<Post[]>(() => remotePosts.value ?? seedPosts)
-  const collections = computed<Collection[]>(() => remoteCollections.value ?? seedCollections)
+  const allPosts = computed<Post[]>(() => remotePosts.value ?? [])
+  const collections = computed<Collection[]>(() => remoteCollections.value ?? [])
   const publicPosts = computed(() =>
     allPosts.value.filter((p) => !p.hidden && !p.draft && p.public !== false),
   )
@@ -108,6 +106,7 @@ export const useContentStore = defineStore('content', () => {
 
   async function load(): Promise<void> {
     if (!apiReady) {
+      error.value = '未配置 VITE_API_BASE_URL，无法加载内容'
       loaded.value = true
       return
     }
@@ -242,7 +241,6 @@ export const useContentStore = defineStore('content', () => {
     error,
     lastAction,
     mutations,
-    siteStartDate,
     allPosts,
     publicPosts,
     collections,

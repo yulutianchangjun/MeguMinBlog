@@ -54,6 +54,21 @@ export interface ApiMessage {
   createdAt: string
 }
 
+export interface ApiComment {
+  id: number
+  postId: number
+  author: string
+  content: string
+  status?: string
+  createdAt: string
+}
+
+export interface CommentPayload {
+  author: string
+  content: string
+  turnstileToken?: string
+}
+
 export interface ApiMusic {
   id: number
   title: string
@@ -85,7 +100,28 @@ export interface ApiUv {
   todayPv: number
   todayUv: number
   activeDays: number
+  topPages: { path: string; count: number }[]
   series: ApiUvDay[]
+}
+
+export interface ApiAnniversary {
+  id: number
+  label: string
+  date: string
+  note?: string
+  sort: number
+}
+
+export interface ApiSiteInfo {
+  startDate: string
+  anniversaries: ApiAnniversary[]
+}
+
+export interface AnniversaryPayload {
+  label: string
+  date: string
+  note?: string
+  sort?: number
 }
 
 export interface LoginResult {
@@ -143,6 +179,9 @@ export const publicApi = {
   posts: (params?: { category?: string; keyword?: string; sort?: string }) =>
     http.get<ApiPost[]>('/posts', params),
   post: (slug: string) => http.get<ApiPost>(`/posts/${encodeURIComponent(slug)}`),
+  comments: (slug: string) => http.get<ApiComment[]>(`/posts/${encodeURIComponent(slug)}/comments`),
+  createComment: (slug: string, payload: CommentPayload) =>
+    http.post<ApiComment>(`/posts/${encodeURIComponent(slug)}/comments`, payload),
   categories: () => http.get<{ name: string; count: number }[]>('/categories'),
   collections: () => http.get<ApiCollection[]>('/collections'),
   collection: (slug: string) =>
@@ -150,6 +189,7 @@ export const publicApi = {
   messages: () => http.get<ApiMessage[]>('/messages'),
   createMessage: (payload: MessagePayload) => http.post<ApiMessage>('/messages', payload),
   music: () => http.get<ApiMusic[]>('/music'),
+  site: () => http.get<ApiSiteInfo>('/site'),
   checkin: () => http.get<ApiCheckin>('/checkin'),
   track: (path: string, slug?: string) => http.post<void>('/track', { path, slug }),
 }
@@ -172,8 +212,18 @@ export const adminApi = {
   messageStatus: (id: number, value: 'approved' | 'hidden') =>
     http.patch<ApiMessage>(`/admin/messages/${id}/status`, undefined, { value }),
   deleteMessage: (id: number) => http.del<void>(`/admin/messages/${id}`),
+  comments: () => http.get<ApiComment[]>('/admin/comments'),
+  deleteComment: (id: number) => http.del<void>(`/admin/comments/${id}`),
   createMusic: (payload: Partial<ApiMusic>) => http.post<ApiMusic>('/admin/music', payload),
   deleteMusic: (id: number) => http.del<void>(`/admin/music/${id}`),
+  anniversaries: () => http.get<ApiAnniversary[]>('/admin/anniversaries'),
+  createAnniversary: (payload: AnniversaryPayload) =>
+    http.post<ApiAnniversary>('/admin/anniversaries', payload),
+  updateAnniversary: (id: number, payload: AnniversaryPayload) =>
+    http.put<ApiAnniversary>(`/admin/anniversaries/${id}`, payload),
+  deleteAnniversary: (id: number) => http.del<void>(`/admin/anniversaries/${id}`),
+  updateStartDate: (startDate: string) =>
+    http.put<void>('/admin/site-config', { startDate }),
   uv: () => http.get<ApiUv>('/admin/stats/uv'),
   checkin: () => http.post<ApiCheckin>('/admin/checkin'),
   upload: (file: File) => http.upload<{ url: string }>('/admin/upload', file),
