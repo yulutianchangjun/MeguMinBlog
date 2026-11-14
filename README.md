@@ -27,7 +27,7 @@
 
 ## 这个项目是什么
 
-一个完整的个人博客系统，不是静态站点生成器，也不是博客主题。
+一个完整的个人博客系统。
 
 - **内容全部存数据库**：文章、综集、留言、评论、曲库、签到、纪念日都由 REST API 实时提供，改一处即全站生效，无需重新构建。
 - **自带管理后台**：登录后可写文章（Markdown 编辑器 + 实时预览）、传封面、管理留言与评论、维护曲库、看 PV/UV 趋势，全程无需碰代码。
@@ -49,7 +49,7 @@
 | **留言墙** | 三面软木板，钉满自动封存开新批次，可回看历史；自定义底色/字色/纸纹；点击 FLIP 抽取放大 |
 | **音乐播放器** | 全局播放器 + 曲库弹窗；支持上传音频或外链，内置 3 首 Web Audio 实时合成曲（零音频资源） |
 | **签到 / 统计** | 博主打卡与徽章、连续天数；PV/UV 存 Redis，后台 14 天趋势图与热门页面 Top5 |
-| **管理后台** | 文章、综集、评论、留言、曲库、站点设置（开站日期 + 纪念日）、UV 仪表盘、改密码 |
+| **管理后台** | 文章、综集、曲库、站点设置（开站日期 + 纪念日）、UV 仪表盘、改密码；评论与留言在对应页面就地管理 |
 | **请求进度条** | 顶部 10px 主题色进度条响应所有 API 请求，上传显示真实进度，失败变警示红 |
 
 **角色权限**：访客可浏览、评论、留言、点赞、听歌；博主登录后解锁后台全部权限。管理入口不常驻页面——**连点左侧头像 5 次**或按 `Ctrl + Shift + L` 唤起。
@@ -128,12 +128,16 @@
 │   ├── lib/                    # http、Markdown、图片压缩、进度条
 │   ├── router/ stores/ styles/ views/
 │   └── main.ts
-├── backend/                    # 后端（包 xyz.cy666.blog）
-│   ├── src/main/java/.../      # controller / service / mapper / entity / dto / security
-│   └── src/main/resources/
-│       ├── application*.yml    # dev / prod 配置
-│       ├── schema.sql          # ★ 12 张表 DDL（启动自动建表）
-│       └── seed.sql            # 示例种子数据（手工导入）
+├── backend/                    # 后端（RuoYi 风格多模块，包 blog.demo）
+│   ├── pom.xml                 # 父 pom（依赖版本统一管理）
+│   ├── blog-common/            # 通用：ApiResponse、PageResult、UserContext、异常、工具、DTO
+│   ├── blog-framework/         # 基础设施：Web 配置、JWT、限流、Turnstile、全局异常
+│   ├── blog-system/            # 业务：domain（实体）/ mapper / service
+│   └── blog-admin/             # 启动模块：web.controller、BlogApplication、application*.yml
+│       └── src/main/resources/
+│           ├── application*.yml  # dev / prod 配置
+│           ├── schema.sql        # ★ 12 张表 DDL（启动自动建表）
+│           └── seed.sql          # 示例种子数据（手工导入）
 ├── content/                    # 种子内容来源
 │   ├── posts/*.md              # 示例文章（带 frontmatter）
 │   └── collections.json        # 综集与开站日期
@@ -152,7 +156,7 @@
 
 ## 数据库结构
 
-12 张表，全部 `InnoDB` / `utf8mb4_unicode_ci`，DDL 见 [`backend/src/main/resources/schema.sql`](backend/src/main/resources/schema.sql)。后端启动时以 `CREATE TABLE IF NOT EXISTS` 自动建表（幂等），**不会插入任何数据**。
+12 张表，全部 `InnoDB` / `utf8mb4_unicode_ci`，DDL 见 [`backend/blog-admin/src/main/resources/schema.sql`](backend/blog-admin/src/main/resources/schema.sql)。后端启动时以 `CREATE TABLE IF NOT EXISTS` 自动建表（幂等），**不会插入任何数据**。
 
 ### 表一览
 
@@ -232,12 +236,14 @@ export MYSQL_PASSWORD=your-password
 
 ```bash
 cd backend
-mvn -DskipTests package
-java -jar target/app.jar
-# 或开发模式：mvn spring-boot:run
+mvn -DskipTests package          # 多模块整体构建
+java -jar blog-admin/target/app.jar
+# 或在 blog-admin 目录下开发模式启动：mvn spring-boot:run
 ```
 
 启动后 `http://localhost:8080/actuator/health` 返回 `UP`，首次启动会自动建好 12 张表（不插数据）。默认 dev 配置的数据库连接：`localhost:3306/blog_db`，账号 `root/123456`，可用 `MYSQL_*` / `REDIS_*` 环境变量覆盖。
+
+> 模块说明：`blog-common`（通用响应/异常/工具/DTO）← `blog-framework`（Web 配置、JWT、限流、Turnstile）← `blog-system`（实体、Mapper、业务服务）← `blog-admin`（Controller 与启动类）。改哪一层就进对应模块。
 
 ### 4. 启动前端
 
@@ -288,7 +294,7 @@ VALUES ('admin', '<粘贴上一步的哈希>', '博主', 1);
 仓库自带 2 篇示例文章和一个示例综集，可选导入（不导也能用，直接后台发文）：
 
 ```bash
-mysql -uroot -p blog_db < backend/src/main/resources/seed.sql
+mysql -uroot -p blog_db < backend/blog-admin/src/main/resources/seed.sql
 ```
 
 种子由 `scripts/gen-seed.mjs` 从 `content/` 生成，格式说明：
@@ -299,7 +305,7 @@ mysql -uroot -p blog_db < backend/src/main/resources/seed.sql
 改完 Markdown 后重新生成：
 
 ```bash
-node scripts/gen-seed.mjs   # 重写 backend/src/main/resources/seed.sql
+node scripts/gen-seed.mjs   # 重写 backend/blog-admin/src/main/resources/seed.sql
 ```
 
 种子用 `INSERT IGNORE` + 显式主键，可重复执行不覆盖已有数据。
@@ -347,7 +353,7 @@ docker compose up -d --build
 | 文章 | 新建 / 编辑 / 删除 / 置顶 / 隐藏 / 草稿；Markdown 编辑 + 预览；上传 `.md` 一键解析 |
 | 封面 | 选图后浏览器端压成 WebP 再上传，落盘 `data/uploads/` |
 | 综集 | 增删改，设置封面、符文、排序 |
-| 评论 / 留言 | 列表查看、置顶、删除 |
+| 评论 / 留言 | **就地管理**：文章详情页评论区可直接删除评论，留言墙卡片上可置顶/删除，不再集中在面板 |
 | 曲库 | 上传音频或填外链，调整排序 |
 | 站点设置 | 开站日期 + 纪念日 CRUD |
 | 统计 | 14 天 PV/UV 趋势、热门页面 Top5 |

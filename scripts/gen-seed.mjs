@@ -230,7 +230,7 @@ lines.push('')
 
 const sql = lines.join('\n')
 // 种子只是手工导入的参考数据：启动与容器首启都不会自动执行。
-const outputs = [path.join(root, 'backend', 'src', 'main', 'resources', 'seed.sql')]
+const outputs = [path.join(root, 'backend', 'blog-admin', 'src', 'main', 'resources', 'seed.sql')]
 for (const file of outputs) {
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, sql, 'utf8')
@@ -238,7 +238,7 @@ for (const file of outputs) {
 }
 
 // schema 同步到 deploy
-const schemaSrc = path.join(root, 'backend', 'src', 'main', 'resources', 'schema.sql')
+const schemaSrc = path.join(root, 'backend', 'blog-admin', 'src', 'main', 'resources', 'schema.sql')
 const schemaDst = path.join(root, 'deploy', 'mysql', 'init', '01-schema.sql')
 fs.mkdirSync(path.dirname(schemaDst), { recursive: true })
 fs.copyFileSync(schemaSrc, schemaDst)

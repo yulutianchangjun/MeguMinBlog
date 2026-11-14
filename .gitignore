@@ -52,6 +52,7 @@ meguminUI/
 .env
 .env.local
 backend/target/
+backend/*/target/
 data/
 deploy/nginx/ssl/*
 !deploy/nginx/ssl/.gitkeep

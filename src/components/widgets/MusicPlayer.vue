@@ -155,11 +155,6 @@ onMounted(() => {
 
     <PlaylistModal v-model:show="listOpen" />
 
-    <p class="note">
-      <template v-if="player.customCount">曲库来自后端 · 上传的音频保存在服务器</template>
-      <template v-else>曲库来自后端 · 合成曲由 Web Audio 实时播放</template>
-    </p>
-
     <AddMusicModal v-model:show="addOpen" />
   </section>
 </template>

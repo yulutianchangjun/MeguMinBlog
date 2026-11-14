@@ -212,7 +212,6 @@ export const adminApi = {
   messageStatus: (id: number, value: 'approved' | 'hidden') =>
     http.patch<ApiMessage>(`/admin/messages/${id}/status`, undefined, { value }),
   deleteMessage: (id: number) => http.del<void>(`/admin/messages/${id}`),
-  comments: () => http.get<ApiComment[]>('/admin/comments'),
   deleteComment: (id: number) => http.del<void>(`/admin/comments/${id}`),
   createMusic: (payload: Partial<ApiMusic>) => http.post<ApiMusic>('/admin/music', payload),
   deleteMusic: (id: number) => http.del<void>(`/admin/music/${id}`),

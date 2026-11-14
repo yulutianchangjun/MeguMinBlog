@@ -149,10 +149,6 @@ onBeforeUnmount(() => {
           </div>
 
           <footer class="pl-bottom">
-            <p>
-              <MagicIcon name="lock" :size="11" />
-              本地音频存放在浏览器 IndexedDB，仅本机可见；删除后不可恢复。
-            </p>
             <p v-if="!auth.isAdmin" class="guest">
               <MagicIcon name="spark" :size="11" />
               访客可以播放与切歌，曲库增删仅博主可用。

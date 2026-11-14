@@ -148,11 +148,6 @@ watch(() => props.postId, load)
         <p class="floor-content">{{ item.content }}</p>
       </article>
     </div>
-
-    <div class="foot">
-      <MagicIcon name="spark" :size="11" />
-      <span>评论保存在本站数据库 · 发布后即时可见</span>
-    </div>
   </section>
 </template>
 

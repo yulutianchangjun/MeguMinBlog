@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { NDrawer, NPopconfirm } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import ImageUploader from '@/components/admin/ImageUploader.vue'
-import { adminApi, type ApiComment } from '@/api'
 import { exportJson, exportZip, parseImportFile } from '@/lib/exporter'
 import { formatDate } from '@/lib/format'
 import { API_BASE, apiReady } from '@/lib/http'
@@ -38,7 +37,6 @@ const show = computed({
 const tabs: { key: AdminTab; label: string; en: string; icon: string }[] = [
   { key: 'posts', label: '文章管理', en: 'Posts', icon: 'book' },
   { key: 'collections', label: '综集管理', en: 'Series', icon: 'layers' },
-  { key: 'comments', label: '评论管理', en: 'Comments', icon: 'comment' },
   { key: 'site', label: '站点设置', en: 'Site', icon: 'star' },
   { key: 'data', label: '导入导出', en: 'Data', icon: 'upload' },
   { key: 'stats', label: '数据仪表', en: 'Stats', icon: 'eye' },
@@ -53,36 +51,7 @@ const saving = ref(false)
 const importing = ref(false)
 const importLog = ref<{ name: string; posts: number; skippedMessages: number }[]>([])
 
-// —— 评论管理 ——
-const comments = ref<ApiComment[]>([])
-const commentsLoading = ref(false)
-
-async function loadComments() {
-  if (!auth.isAdmin) return
-  commentsLoading.value = true
-  try {
-    comments.value = await adminApi.comments()
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : '评论加载失败')
-  } finally {
-    commentsLoading.value = false
-  }
-}
-
-function postTitleOf(postId: number): string {
-  const post = content.allPosts.find((item) => item.remoteId === postId)
-  return post?.title ?? `文章 #${postId}`
-}
-
-async function removeComment(id: number) {
-  try {
-    await adminApi.deleteComment(id)
-    comments.value = comments.value.filter((item) => item.id !== id)
-    toast.success('评论已删除')
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : '删除失败')
-  }
-}
+// —— 评论管理已移入文章详情页评论区（管理员就地删除），面板不再集中管理 ——
 const fileInput = ref<HTMLInputElement | null>(null)
 const mdInput = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
@@ -197,9 +166,6 @@ function switchTab(tab: AdminTab) {
   ui.adminTab = tab
   if (tab === 'stats' && auth.isAdmin) {
     void profile.loadUv()
-  }
-  if (tab === 'comments') {
-    void loadComments()
   }
   if (tab === 'site') {
     startDateInput.value = siteStore.startDate
@@ -531,7 +497,7 @@ function logout() {
         <div class="head-left">
           <span class="seal">
             <img v-if="auth.avatar" :src="auth.avatar" :alt="auth.login" />
-            <MagicIcon v-else name="shield" :size="16" />
+            <MagicIcon class="seal-icon" v-else name="shield" :size="16" />
           </span>
           <div>
             <strong>管理面板</strong>
@@ -554,7 +520,6 @@ function logout() {
         >
           <MagicIcon :name="tab.icon" :size="14" />
           <span>{{ tab.label }}</span>
-          <em>{{ tab.en }}</em>
         </button>
       </nav>
 
@@ -793,47 +758,6 @@ function logout() {
         </template>
 
         <!-- 评论管理 -->
-        <template v-else-if="ui.adminTab === 'comments'">
-          <div class="toolbar">
-            <div class="summary">
-              <span><strong>{{ comments.length }}</strong> 条评论</span>
-              <button class="btn-magic small" :disabled="commentsLoading" @click="loadComments">
-                <MagicIcon name="refresh" :size="13" />
-                {{ commentsLoading ? '加载中…' : '刷新' }}
-              </button>
-            </div>
-          </div>
-
-          <p v-if="!commentsLoading && !comments.length" class="empty-tip">
-            还没有评论。文章页的评论区发表后会出现在这里。
-          </p>
-
-          <ul class="post-list">
-            <li v-for="item in comments" :key="item.id" class="post-row comment-row">
-              <div class="row-main">
-                <div class="row-title">
-                  <strong>{{ item.author }}</strong>
-                  <span class="badge gold">{{ postTitleOf(item.postId) }}</span>
-                </div>
-                <div class="row-meta">
-                  <span class="comment-text">{{ item.content }}</span>
-                </div>
-                <div class="row-meta">
-                  <span>{{ formatDate(item.createdAt) }}</span>
-                </div>
-              </div>
-              <div class="row-actions">
-                <n-popconfirm @positive-click="removeComment(item.id)">
-                  <template #trigger>
-                    <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
-                  </template>
-                  删除 {{ item.author }} 的这条评论？
-                </n-popconfirm>
-              </div>
-            </li>
-          </ul>
-        </template>
-
         <!-- 站点设置 -->
         <template v-else-if="ui.adminTab === 'site'">
           <div class="editor">
@@ -1103,6 +1027,12 @@ function logout() {
   object-fit: cover;
 }
 
+.seal-icon{
+    width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .head-left strong {
   display: block;
   font-family: var(--font-display);
@@ -1233,23 +1163,6 @@ function logout() {
   text-align: center;
   font-size: 11.5px;
   color: var(--c-muted);
-}
-
-.comment-row {
-  align-items: flex-start;
-}
-
-.comment-row .comment-text {
-  max-width: 420px;
-  font-size: 11.5px;
-  line-height: 1.7;
-  color: var(--c-text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
 }
 
 .post-row {

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-export type AdminTab = 'posts' | 'collections' | 'comments' | 'site' | 'data' | 'stats'
+export type AdminTab = 'posts' | 'collections' | 'site' | 'data' | 'stats'
 
 export const useUiStore = defineStore('ui', () => {
   const loginOpen = ref(false)

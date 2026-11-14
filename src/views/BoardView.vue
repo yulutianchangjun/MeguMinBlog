@@ -510,10 +510,10 @@ onMounted(() => {
                 <MagicIcon name="pin" :size="14" />
                 钉上去
               </button>
-              <p class="hint">
+              <!-- <p class="hint">
                 <MagicIcon name="lock" :size="10" />
                 {{ apiReady ? '留言免登录，凭昵称发表；同一 IP 每分钟 1 条、每小时 5 条' : '未连接后端，便签只存在这台设备' }}
-              </p>
+              </p> -->
             </div>
 
             <div v-else key="info" class="board-info">
@@ -551,7 +551,7 @@ onMounted(() => {
               </button>
               <p class="hint">
                 <MagicIcon name="lock" :size="10" />
-                置顶与取下仅博主可用
+                取下仅博主可用
               </p>
             </div>
           </transition>

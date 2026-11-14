@@ -110,7 +110,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <AppHeader />
         <div class="shell" :class="{ bare }">
           <div class="layout-grid" :class="{ bare }">
-            <aside v-if="!bare" class="col-side left">
+            <!-- TODO: 修改布局，让其能正常渲染全部卡片 -->
+            <aside v-if="!bare" class="col-side left left-sidebar-scroll">
               <LeftSidebar />
             </aside>
             <main class="content" :class="{ bare }">

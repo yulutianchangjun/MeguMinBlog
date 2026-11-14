@@ -158,10 +158,6 @@ function addRemote() {
         </label>
 
         <p v-if="localError" class="error">{{ localError }}</p>
-        <p class="tip">
-          <MagicIcon name="lock" :size="10" />
-          音频写入浏览器 IndexedDB，仅本机可见；清理浏览器数据会一并删除。
-        </p>
 
         <button type="submit" class="btn-magic full" :disabled="adding || !file">
           <MagicIcon name="plus" :size="14" />

@@ -147,7 +147,7 @@ function goBoard() {
       <section class="board-teaser mage-card">
         <div class="panel-title">
           <span>Pinned Notes</span>
-          <span class="cn">墙上的置顶</span>
+          <span class="cn">留言</span>
         </div>
         <div class="marquee">
           <div class="marquee-track">

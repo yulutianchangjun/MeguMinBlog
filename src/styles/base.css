@@ -98,27 +98,33 @@ html {
   background: transparent;
 }
 
-/* 右侧栏内部滚动容器：更窄的滑轨，几乎不占宽度 */
+/* 左右侧栏内部滚动容器：更窄的滑轨，几乎不占宽度 */
+.left-sidebar-scroll,
 .right-sidebar-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(165, 42, 54, 0.4) transparent;
+  scrollbar-color: #571f27 transparent;
 }
 
+.left-sidebar-scroll::-webkit-scrollbar,
 .right-sidebar-scroll::-webkit-scrollbar {
   width: 5px;
 }
 
+.left-sidebar-scroll::-webkit-scrollbar-track,
 .right-sidebar-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.left-sidebar-scroll::-webkit-scrollbar-thumb,
 .right-sidebar-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(165, 42, 54, 0.35);
+  background: linear-gradient(180deg, rgba(165, 42, 54, 0.75), rgba(217, 172, 88, 0.55));
+  border: 1px solid rgba(217, 172, 88, 0.3);
 }
 
+.left-sidebar-scroll:hover::-webkit-scrollbar-thumb,
 .right-sidebar-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(217, 172, 88, 0.6);
+  background: linear-gradient(180deg, rgba(199, 60, 75, 0.95), rgba(242, 219, 166, 0.85));
 }
 
 h1,
@@ -161,13 +167,20 @@ p {
   flex-direction: column;
   gap: 18px;
   max-height: calc(100vh - var(--header-h) - 36px);
-}
-
-.col-side.right {
+  /* 卡片总和超过一屏时整栏滚动，而不是把卡片压扁 */
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
   padding-right: 2px;
+}
+
+/* 侧栏内卡片按内容高度撑开，禁止被 flex 压缩（否则 ProfileCard 与 MusicPlayer 互相挤压） */
+.col-side > * {
+  flex: 0 0 auto;
+}
+
+.col-side.right {
+  scrollbar-width: thin;
 }
 
 main.content {
@@ -477,6 +490,8 @@ main.content {
   .col-side.left {
     position: static;
     max-height: none;
+    /* 单列布局下交给页面整体滚动，避免出现内嵌滚动区 */
+    overflow: visible;
     order: 2;
   }
   main.content {
