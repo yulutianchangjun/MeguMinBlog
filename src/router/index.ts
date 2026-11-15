@@ -13,7 +13,7 @@ const router = createRouter({
       path: '/posts',
       name: 'posts',
       component: () => import('@/views/PostsView.vue'),
-      meta: { title: '日常流', keepAlive: true },
+      meta: { title: '日常', keepAlive: true },
     },
     {
       path: '/posts/:id',

@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { adminApi, publicApi, type ApiMessage } from '@/api'
 import { apiReady } from '@/lib/http'
-import { readJSON, writeJSON } from '@/lib/storage'
 import type { BoardMessage, BoardTexture, BoardWall } from '@/types'
 
 function mapMessage(source: ApiMessage): BoardMessage {
@@ -24,11 +23,10 @@ function mapMessage(source: ApiMessage): BoardMessage {
 /**
  * 互动数据：
  * - 留言墙便签：全部来自 MySQL blog_message_board，不再有本地 localStorage 兜底
- * - 点赞仍是本机行为（后端暂未建点赞表，属于访客侧轻互动）
+ * - 点赞：已入库（blog_post_like，按 IP 去重），状态由 PostDetailView 走 /posts/{slug}/like 读取，
+ *   总数随文章数据返回（post.likes），这里不再维护本地计数
  */
 export const useInteractionStore = defineStore('interaction', () => {
-  const likes = ref<Record<string, number>>(readJSON('likes', {}))
-  const liked = ref<Record<string, boolean>>(readJSON('liked', {}))
   const error = ref('')
 
   const messages = ref<BoardMessage[]>([])
@@ -44,25 +42,6 @@ export const useInteractionStore = defineStore('interaction', () => {
     } catch (err) {
       error.value = err instanceof Error ? err.message : '留言加载失败'
     }
-  }
-
-  function likeTotal(postId: string): number {
-    return likes.value[postId] ?? 0
-  }
-
-  function hasLiked(postId: string): boolean {
-    return Boolean(liked.value[postId])
-  }
-
-  function toggleLike(postId: string): void {
-    const now = !liked.value[postId]
-    liked.value = { ...liked.value, [postId]: now }
-    likes.value = {
-      ...likes.value,
-      [postId]: Math.max(0, (likes.value[postId] ?? 0) + (now ? 1 : -1)),
-    }
-    writeJSON('liked', liked.value)
-    writeJSON('likes', likes.value)
   }
 
   const pinnedMessages = computed(() => messages.value.filter((message) => message.pinned))
@@ -102,14 +81,10 @@ export const useInteractionStore = defineStore('interaction', () => {
   }
 
   return {
-    likes,
     messages,
     pinnedMessages,
     error,
     load,
-    likeTotal,
-    hasLiked,
-    toggleLike,
     addMessage,
     toggleMessagePin,
     deleteMessage,

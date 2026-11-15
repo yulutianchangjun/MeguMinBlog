@@ -16,6 +16,7 @@ public record PostDetail(
         String status,
         LocalDate publishedAt,
         Integer views,
+        Integer likes,
         List<String> categories,
         List<String> collections,
         String prevSlug,

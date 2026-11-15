@@ -17,6 +17,8 @@ export interface Post {
   draft?: boolean
   /** 仅静态构建模式使用：frontmatter public: false 会从产物中剔除 */
   public?: boolean
+  /** 服务端点赞总数 */
+  likes?: number
   /** 种子文章来源路径，导出时用于回写 */
   source?: string
 }

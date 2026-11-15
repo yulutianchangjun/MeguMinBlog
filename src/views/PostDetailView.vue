@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import CommentSection from '@/components/post/CommentSection.vue'
+import { publicApi } from '@/api'
 import { renderMarkdown, readingMinutes } from '@/lib/markdown'
 import { resolveAsset } from '@/lib/asset'
 import { formatDate } from '@/lib/format'
@@ -31,8 +32,9 @@ const accessible = computed(() => {
 const rendered = computed(() => renderMarkdown(post.value?.content ?? ''))
 const minutes = computed(() => readingMinutes(post.value?.content ?? ''))
 const cover = computed(() => resolveAsset(post.value?.cover))
-const likes = computed(() => interaction.likeTotal(post.value?.id ?? ''))
-const liked = computed(() => interaction.hasLiked(post.value?.id ?? ''))
+// 点赞：总数随文章返回，是否已赞按当前 IP 从服务端查
+const likes = ref(post.value?.likes ?? 0)
+const liked = ref(false)
 
 const ordered = computed(() => content.publicPosts)
 const index = computed(() => ordered.value.findIndex((item) => item.id === post.value?.id))
@@ -76,6 +78,10 @@ watch(
   () => {
     reading.clear()
     window.scrollTo({ top: 0 })
+    // 换文章后重新取赞数，避免沿用上一篇的数字
+    likes.value = post.value?.likes ?? 0
+    liked.value = false
+    void loadLike()
   },
 )
 
@@ -97,12 +103,33 @@ function toTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function like() {
+async function like() {
   if (!post.value) return
-  interaction.toggleLike(post.value.id)
-  if (!liked.value) {
-    likeBurst.value = true
-    window.setTimeout(() => (likeBurst.value = false), 600)
+  try {
+    const result = await publicApi.toggleLike(post.value.id)
+    liked.value = result.liked
+    likes.value = result.total
+    // 同步到文章对象，列表卡片的赞数保持一致
+    const target = content.allPosts.find((item) => item.id === post.value?.id)
+    if (target) target.likes = result.total
+    if (result.liked) {
+      likeBurst.value = true
+      window.setTimeout(() => (likeBurst.value = false), 600)
+    }
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '点赞失败，请稍后再试')
+  }
+}
+
+/** 进入文章时拉取当前 IP 的点赞状态与总数 */
+async function loadLike() {
+  if (!post.value) return
+  try {
+    const result = await publicApi.likeStatus(post.value.id)
+    liked.value = result.liked
+    likes.value = result.total
+  } catch {
+    // 后端不可用时按未点赞展示，不打断阅读
   }
 }
 
@@ -116,6 +143,7 @@ async function share() {
 }
 
 onMounted(() => {
+  void loadLike()
   window.addEventListener('scroll', syncScroll, { passive: true })
   syncScroll()
 })
@@ -135,7 +163,7 @@ onBeforeUnmount(() => {
       <p>文章不存在，或者被博主藏进了草稿箱。</p>
       <button class="btn-magic" @click="backToList">
         <MagicIcon name="arrowLeft" :size="14" />
-        返回日常流
+        返回日常
       </button>
     </div>
   </div>
@@ -148,7 +176,7 @@ onBeforeUnmount(() => {
         <nav class="crumbs">
           <router-link to="/">首页</router-link>
           <span>/</span>
-          <router-link to="/posts">日常流</router-link>
+          <router-link to="/posts"></router-link>
           <span>/</span>
           <em>{{ post.categories[0] ?? '未分类' }}</em>
         </nav>

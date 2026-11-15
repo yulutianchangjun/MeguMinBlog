@@ -24,9 +24,9 @@ public class AuthService {
     private final TokenStore tokenStore;
     private final CaptchaService captchaService;
 
-    public LoginResponse login(LoginRequest request) {
-        // 先校验算术验证码（一次性，校验即销毁），再查库比对密码
-        captchaService.verify(request.captchaId(), request.captchaAnswer());
+    public LoginResponse login(LoginRequest request, String ip) {
+        // 先校验算术验证码（按 IP 定位、一次性销毁），再查库比对密码
+        captchaService.verify(ip, request.captchaAnswer());
         SysUser user = userMapper.selectOne(
                 new QueryWrapper<SysUser>().eq("username", request.username().trim()).last("LIMIT 1"));
         if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {

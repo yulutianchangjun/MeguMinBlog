@@ -17,7 +17,7 @@ const props = withDefaults(
 const interaction = useInteractionStore()
 
 const cover = computed(() => resolveAsset(props.post.cover))
-const likes = computed(() => interaction.likeTotal(props.post.id))
+const likes = computed(() => props.post.likes ?? 0)
 const day = computed(() => props.post.date.slice(5).replace('-', ' / '))
 const year = computed(() => props.post.date.slice(0, 4))
 </script>

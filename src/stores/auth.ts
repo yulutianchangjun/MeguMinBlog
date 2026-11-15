@@ -56,7 +56,6 @@ export const useAuthStore = defineStore('auth', () => {
   async function loginWithPassword(
     username: string,
     password: string,
-    captchaId: string,
     captchaAnswer: string,
   ): Promise<boolean> {
     error.value = ''
@@ -66,7 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
     loading.value = true
     try {
-      const result = await authApi.login(username.trim(), password, captchaId, captchaAnswer)
+      const result = await authApi.login(username.trim(), password, captchaAnswer)
       tokenStore.set(result.token)
       persist(toAuthUser(result.user))
       return true

@@ -9,6 +9,8 @@ import blog.demo.common.dto.TodayStatsView;
 import blog.demo.common.dto.UvDayView;
 import blog.demo.common.dto.UvSummaryView;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -55,7 +57,8 @@ public class StatsService {
 
     /**
      * 是否是可计入 UV 的访问来源。
-     * 排除空值、unknown、回环地址与内网网段，避免本地调试、容器健康检查、内网探活把 UV 注水。
+     * 排除空值、unknown 与回环/内网/链路本地地址（IPv4 与 IPv6 都覆盖），
+     * 避免本地调试、容器健康检查、内网探活把 UV 注水。
      */
     private boolean countableIp(String ip) {
         if (!StringUtils.hasText(ip)) {
@@ -65,27 +68,17 @@ public class StatsService {
         if (value.isEmpty() || "unknown".equalsIgnoreCase(value)) {
             return false;
         }
-        if ("127.0.0.1".equals(value) || "0.0.0.0".equals(value) || "::1".equals(value)) {
+        try {
+            // 纯 IP 字面量解析不会触发 DNS 查询
+            var address = InetAddress.getByName(value);
+            return !(address.isLoopbackAddress()
+                    || address.isAnyLocalAddress()
+                    || address.isSiteLocalAddress()
+                    || address.isLinkLocalAddress()
+                    || address.isMulticastAddress());
+        } catch (UnknownHostException ex) {
             return false;
         }
-        if (value.startsWith("10.") || value.startsWith("192.168.")) {
-            return false;
-        }
-        if (value.startsWith("172.")) {
-            // 172.16.0.0 ~ 172.31.255.255 为内网
-            String[] parts = value.split("\\.");
-            if (parts.length > 1) {
-                try {
-                    int second = Integer.parseInt(parts[1]);
-                    if (second >= 16 && second <= 31) {
-                        return false;
-                    }
-                } catch (NumberFormatException ignored) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     /** 今日 PV / UV（公开接口用，前台页头展示「今日访客」） */

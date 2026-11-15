@@ -46,7 +46,22 @@ public class RateLimiter {
     }
 
     /**
-     * 获取验证码：同一 IP 每分钟最多 15 次（刷新太频繁说明在试探）。
+     * 点赞：同一 IP 每分钟最多 30 次切换（正常用户点不了这么快，防脚本反复切换写库）。
+     */
+    public void checkLike(String ip) {
+        long minute = Instant.now().getEpochSecond() / 60;
+        String key = "rl:like:m:" + ip + ":" + minute;
+        Long count = redis.opsForValue().increment(key);
+        if (count != null && count == 1L) {
+            redis.expire(key, Duration.ofMinutes(2));
+        }
+        if (count != null && count > 30) {
+            throw BizException.tooMany("操作太频繁，请稍后再试");
+        }
+    }
+
+    /**
+     * 获取验证码：同一 IP 每分钟最多 10 次（刷新太频繁说明在试探）。
      */
     public void checkCaptcha(String ip) {
         long minute = Instant.now().getEpochSecond() / 60;
@@ -55,7 +70,7 @@ public class RateLimiter {
         if (count != null && count == 1L) {
             redis.expire(key, Duration.ofMinutes(2));
         }
-        if (count != null && count > 15) {
+        if (count != null && count > 10) {
             throw BizException.tooMany("验证码获取过于频繁，请稍后再试");
         }
     }

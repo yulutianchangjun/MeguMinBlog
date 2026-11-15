@@ -24,7 +24,6 @@ withDefaults(
 </script>
 
 <template>
-  <!-- TODO:空状态时，居中显示 -->
   <div class="empty-state" :class="{ compact }">
     <img v-if="image" class="art-img" :src="image" :alt="title || '空状态'" loading="lazy" />
     <span v-else class="art">

@@ -146,8 +146,8 @@ function goBoard() {
         v-if="!featured.length"
         icon="book"
         title="还没有手记"
-        description="等博主写下第一页，或者去「日常流」翻翻更早的记录。"
-        action-text="去日常流看看"
+        description="等博主写下第一页，或者去「日常」翻翻更早的记录。"
+        action-text="去日常看看"
         action-to="/posts"
       />
     </section>
@@ -178,8 +178,10 @@ function goBoard() {
             </template>
           </div>
 
+          <!-- TODO:空状态时，居中显示 -->
           <EmptyState
             v-else
+            class="board-empty"
             compact
             icon="pin"
             title="留言墙还是空的"
@@ -288,7 +290,6 @@ function goBoard() {
         v-if="!content.collections.length"
         icon="layers"
         title="还没有综集"
-        description="综集把同一主题的系列手记收在一起。博主可在后台「综集管理」创建第一个综集。"
       />
     </section>
   </div>
@@ -576,6 +577,14 @@ function goBoard() {
   overflow: hidden;
   padding: 14px 0 16px;
   mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+/* 空状态撑满容器，内部 flex 居中；有卡片时 marquee-track 的宽度与动画不受影响 */
+.marquee .board-empty {
+  flex: 1 1 auto;
+  width: 100%;
+  margin: 0 18px;
+  mask-image: none;
 }
 
 .marquee-track {

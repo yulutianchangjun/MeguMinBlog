@@ -20,10 +20,13 @@ import blog.demo.system.mapper.BlogPostMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -57,7 +60,7 @@ public class PostService {
             case "hot" -> wrapper.orderByDesc("views").orderByDesc("published_at");
             default -> wrapper.orderByDesc("pinned").orderByDesc("published_at").orderByDesc("id");
         }
-        return postMapper.selectList(wrapper).stream().map(this::toSummary).toList();
+        return toSummaries(postMapper.selectList(wrapper));
     }
 
     public PostDetail detail(String slug, boolean includeUnpublished) {
@@ -68,17 +71,16 @@ public class PostService {
         if (!includeUnpublished && !"published".equals(post.getStatus())) {
             throw BizException.notFound("这篇手记不存在");
         }
-        return toDetail(post);
+        return toDetail(post, likeCount(post.getId()));
     }
 
     public List<PostSummary> listAll() {
-        return postMapper.selectList(new QueryWrapper<BlogPost>()
-                        .orderByDesc("pinned").orderByDesc("published_at").orderByDesc("id"))
-                .stream().map(this::toSummary).toList();
+        return toSummaries(postMapper.selectList(new QueryWrapper<BlogPost>()
+                .orderByDesc("pinned").orderByDesc("published_at").orderByDesc("id")));
     }
 
     public List<PostSummary> listByCollection(String slug) {
-        return postMapper.selectPublishedByCollection(slug).stream().map(this::toSummary).toList();
+        return toSummaries(postMapper.selectPublishedByCollection(slug));
     }
 
     public void incrementViews(Long id) {
@@ -136,7 +138,8 @@ public class PostService {
 
         saveCategories(post.getId(), request.getCategories());
         saveCollections(post.getId(), request.getCollections());
-        return toDetail(postMapper.selectById(post.getId()));
+        BlogPost saved = postMapper.selectById(post.getId());
+        return toDetail(saved, likeCount(saved.getId()));
     }
 
     @Transactional
@@ -146,6 +149,7 @@ public class PostService {
         }
         // 级联清理：文章下的评论、分类关联、综集关联随文章一起删除，避免孤儿数据
         jdbc.update("DELETE FROM blog_comment WHERE post_id = ?", id);
+        jdbc.update("DELETE FROM blog_post_like WHERE post_id = ?", id);
         jdbc.update("DELETE FROM blog_post_category WHERE post_id = ?", id);
         jdbc.update("DELETE FROM blog_post_collection WHERE post_id = ?", id);
         postMapper.deleteById(id);
@@ -164,12 +168,41 @@ public class PostService {
         }
         post.setUpdatedAt(LocalDateTime.now());
         postMapper.updateById(post);
-        return toSummary(post);
+        return toSummary(post, likeCount(post.getId()));
     }
 
     // ---------- 映射与工具 ----------
 
-    private PostSummary toSummary(BlogPost post) {
+    private List<PostSummary> toSummaries(List<BlogPost> posts) {
+        Map<Long, Integer> likes = loadLikeCounts(posts);
+        return posts.stream()
+                .map(post -> toSummary(post, likes.getOrDefault(post.getId(), 0)))
+                .toList();
+    }
+
+    /** 一次聚合查出整页文章的点赞数，避免逐条查询 */
+    private Map<Long, Integer> loadLikeCounts(List<BlogPost> posts) {
+        if (posts.isEmpty()) {
+            return Map.of();
+        }
+        String placeholders = posts.stream().map(p -> "?").collect(Collectors.joining(","));
+        Object[] args = posts.stream().map(BlogPost::getId).toArray();
+        Map<Long, Integer> counts = new HashMap<>();
+        jdbc.query("SELECT post_id, COUNT(*) AS c FROM blog_post_like WHERE post_id IN (" + placeholders
+                        + ") GROUP BY post_id",
+                rs -> {
+                    counts.put(rs.getLong("post_id"), rs.getInt("c"));
+                }, args);
+        return counts;
+    }
+
+    private int likeCount(Long postId) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM blog_post_like WHERE post_id = ?", Integer.class, postId);
+        return count == null ? 0 : count;
+    }
+
+    private PostSummary toSummary(BlogPost post, int likes) {
         return new PostSummary(
                 post.getId(),
                 post.getSlug(),
@@ -183,11 +216,12 @@ public class PostService {
                 post.getStatus(),
                 post.getPublishedAt(),
                 post.getViews() == null ? 0 : post.getViews(),
+                likes,
                 postMapper.selectCategoryNames(post.getId()),
                 postMapper.selectCollectionSlugs(post.getId()));
     }
 
-    private PostDetail toDetail(BlogPost post) {
+    private PostDetail toDetail(BlogPost post, int likes) {
         BlogPost prev = null;
         BlogPost next = null;
         if (post.getPublishedAt() != null) {
@@ -218,6 +252,7 @@ public class PostService {
                 post.getStatus(),
                 post.getPublishedAt(),
                 post.getViews() == null ? 0 : post.getViews(),
+                likes,
                 postMapper.selectCategoryNames(post.getId()),
                 postMapper.selectCollectionSlugs(post.getId()),
                 prev == null ? null : prev.getSlug(),

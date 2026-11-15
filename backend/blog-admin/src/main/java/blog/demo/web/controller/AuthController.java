@@ -38,13 +38,15 @@ public class AuthController {
     /** 登录前先取一道算术验证码（答案只在服务端 Redis 里，2 分钟有效） */
     @GetMapping("/captcha")
     public ApiResponse<CaptchaView> captcha(HttpServletRequest request) {
-        rateLimiter.checkCaptcha(ClientIp.of(request));
-        return ApiResponse.ok(captchaService.create());
+        String ip = ClientIp.of(request);
+        rateLimiter.checkCaptcha(ip);
+        return ApiResponse.ok(captchaService.create(ip));
     }
 
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.ok(authService.login(request));
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                            HttpServletRequest servletRequest) {
+        return ApiResponse.ok(authService.login(request, ClientIp.of(servletRequest)));
     }
 
     @PostMapping("/logout")

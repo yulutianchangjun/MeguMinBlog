@@ -136,3 +136,14 @@ CREATE TABLE IF NOT EXISTS blog_comment (
   PRIMARY KEY (id),
   KEY idx_comment_post (post_id, status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 点赞：一人一 IP 对一篇文章只算一次，重复点赞即取消（唯一键保证幂等）
+CREATE TABLE IF NOT EXISTS blog_post_like (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  post_id BIGINT UNSIGNED NOT NULL,
+  ip VARCHAR(64) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_blog_post_like (post_id, ip),
+  KEY idx_blog_post_like_post (post_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

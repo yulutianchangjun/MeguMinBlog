@@ -1,40 +1,40 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { NModal } from 'naive-ui'
-import MagicIcon from '@/components/common/MagicIcon.vue'
-import { authApi } from '@/api'
-import { API_BASE, apiReady } from '@/lib/http'
-import { toast } from '@/lib/toast'
-import { useAuthStore } from '@/stores/auth'
-import { useUiStore } from '@/stores/ui'
+import { computed, ref, watch } from "vue";
+import { NModal } from "naive-ui";
+import MagicIcon from "@/components/common/MagicIcon.vue";
+import { authApi } from "@/api";
+import { API_BASE, apiReady } from "@/lib/http";
+import { toast } from "@/lib/toast";
+import { useAuthStore } from "@/stores/auth";
+import { useUiStore } from "@/stores/ui";
 
-const auth = useAuthStore()
-const ui = useUiStore()
+const auth = useAuthStore();
+const ui = useUiStore();
 
 const show = computed({
   get: () => ui.loginOpen,
   set: (value: boolean) => (value ? ui.openLogin() : ui.closeLogin()),
-})
+});
 
-const username = ref('')
-const password = ref('')
-const captcha = ref<{ id: string; question: string } | null>(null)
-const captchaAnswer = ref('')
-const captchaLoading = ref(false)
+const username = ref("");
+const password = ref("");
+const captcha = ref<{ question: string } | null>(null);
+const captchaAnswer = ref("");
+const captchaLoading = ref(false);
 
 async function loadCaptcha() {
   if (!apiReady) {
-    captcha.value = null
-    return
+    captcha.value = null;
+    return;
   }
-  captchaLoading.value = true
+  captchaLoading.value = true;
   try {
-    captcha.value = await authApi.captcha()
-    captchaAnswer.value = ''
+    captcha.value = await authApi.captcha();
+    captchaAnswer.value = "";
   } catch {
-    captcha.value = null
+    captcha.value = null;
   } finally {
-    captchaLoading.value = false
+    captchaLoading.value = false;
   }
 }
 
@@ -42,42 +42,41 @@ watch(
   () => ui.loginOpen,
   (open) => {
     if (open) {
-      auth.error = ''
-      username.value = ''
-      password.value = ''
-      void loadCaptcha()
+      auth.error = "";
+      username.value = "";
+      password.value = "";
+      void loadCaptcha();
     }
   },
-)
+);
 
 async function submit() {
   if (!username.value.trim() || !password.value) {
-    toast.warning('请输入账号与密码')
-    return
+    toast.warning("请输入账号与密码");
+    return;
   }
   if (!captcha.value) {
-    toast.warning('请等待验证码加载')
-    return
+    toast.warning("请等待验证码加载");
+    return;
   }
   if (!captchaAnswer.value.trim()) {
-    toast.warning('请填写验证码答案')
-    return
+    toast.warning("请填写验证码答案");
+    return;
   }
   const ok = await auth.loginWithPassword(
     username.value,
     password.value,
-    captcha.value.id,
     captchaAnswer.value,
-  )
+  );
   if (ok) {
-    password.value = ''
-    captchaAnswer.value = ''
-    ui.closeLogin()
-    ui.openAdmin('posts')
-    toast.success(`欢迎回来，${auth.user?.nickname || auth.login}`)
+    password.value = "";
+    captchaAnswer.value = "";
+    ui.closeLogin();
+    ui.openAdmin("posts");
+    toast.success(`欢迎回来，${auth.user?.nickname || auth.login}`);
   } else {
     // 验证码一次性，失败后必须换一题再试
-    void loadCaptcha()
+    void loadCaptcha();
   }
 }
 </script>
@@ -98,7 +97,12 @@ async function submit() {
       <form class="form" @submit.prevent="submit">
         <label class="field">
           <span>账号</span>
-          <input v-model="username" autocomplete="username" placeholder="请输入账号" spellcheck="false" />
+          <input
+            v-model="username"
+            autocomplete="username"
+            placeholder="请输入账号"
+            spellcheck="false"
+          />
         </label>
         <label class="field">
           <span>密码</span>
@@ -113,6 +117,14 @@ async function submit() {
         <label class="field">
           <span>验证码</span>
           <div class="captcha-row">
+            <input
+              v-model="captchaAnswer"
+              class="captcha-input"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="4"
+              placeholder="请输入验证码"
+            />
             <button
               type="button"
               class="captcha-question"
@@ -120,16 +132,9 @@ async function submit() {
               title="点击换一题"
               @click="loadCaptcha"
             >
-              {{ captchaLoading ? '生成中…' : captcha?.question || '点击获取' }}
+              {{ captchaLoading ? "生成中…" : captcha?.question || "点击获取" }}
             </button>
-            <input
-              v-model="captchaAnswer"
-              class="captcha-input"
-              inputmode="numeric"
-              autocomplete="off"
-              maxlength="4"
-              placeholder="答案"
-            />
+
             <button
               type="button"
               class="captcha-refresh"
@@ -144,9 +149,13 @@ async function submit() {
 
         <p v-if="auth.error" class="error">{{ auth.error }}</p>
 
-        <button type="submit" class="btn-magic full" :disabled="auth.loading || !apiReady">
+        <button
+          type="submit"
+          class="btn-magic full"
+          :disabled="auth.loading || !apiReady"
+        >
           <MagicIcon name="lock" :size="14" />
-          {{ auth.loading ? '正在校验…' : '登录' }}
+          {{ auth.loading ? "正在校验…" : "登录" }}
         </button>
       </form>
 
@@ -166,9 +175,15 @@ async function submit() {
   overflow: hidden;
   border-color: rgba(217, 172, 88, 0.32);
   background:
-    radial-gradient(120% 100% at 88% 0%, rgba(165, 42, 54, 0.3), transparent 58%),
+    radial-gradient(
+      120% 100% at 88% 0%,
+      rgba(165, 42, 54, 0.3),
+      transparent 58%
+    ),
     linear-gradient(160deg, #2b2231 0%, #1b1621 52%, #141019 100%);
-  box-shadow: 0 40px 80px -40px #000, 0 0 0 1px rgba(217, 172, 88, 0.08);
+  box-shadow:
+    0 40px 80px -40px #000,
+    0 0 0 1px rgba(217, 172, 88, 0.08);
 }
 
 .close {
@@ -205,7 +220,11 @@ async function submit() {
   place-items: center;
   border-radius: 50%;
   border: 1px solid rgba(217, 172, 88, 0.4);
-  background: radial-gradient(circle, rgba(165, 42, 54, 0.5), rgba(20, 15, 26, 0.8));
+  background: radial-gradient(
+    circle,
+    rgba(165, 42, 54, 0.5),
+    rgba(20, 15, 26, 0.8)
+  );
   color: var(--c-gold-2);
   margin-bottom: 12px;
 }
@@ -288,7 +307,6 @@ async function submit() {
 }
 
 .captcha-question {
-  flex: 1;
   padding: 10px 12px;
   border-radius: 9px;
   border: 1px dashed rgba(217, 172, 88, 0.42);
@@ -298,7 +316,9 @@ async function submit() {
   font-size: 14px;
   letter-spacing: 0.14em;
   cursor: pointer;
-  transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  transition:
+    border-color 0.2s var(--ease),
+    background 0.2s var(--ease);
 }
 
 .captcha-question:hover:not(:disabled) {
@@ -313,7 +333,7 @@ async function submit() {
 
 .field input.captcha-input {
   width: 78px;
-  flex: none;
+  flex: 1;
   padding: 10px 6px;
   text-align: center;
   font-size: 14px;

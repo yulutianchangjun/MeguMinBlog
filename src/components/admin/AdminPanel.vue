@@ -143,7 +143,7 @@ async function removeAnniversary(item: SiteAnniversary) {
 }
 
 const totalLikes = computed(() =>
-  content.allPosts.reduce((sum, post) => sum + interaction.likeTotal(post.id), 0),
+  content.allPosts.reduce((sum, post) => sum + (post.likes ?? 0), 0),
 )
 
 const apiBase = API_BASE

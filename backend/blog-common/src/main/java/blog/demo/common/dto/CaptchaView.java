@@ -1,5 +1,5 @@
 package blog.demo.common.dto;
 
-/** 登录验证码：id 用于校验，question 是展示给用户的算式 */
-public record CaptchaView(String id, String question) {
+/** 登录验证码：只下发算式，答案留在服务端 Redis（按 IP 存，2 分钟有效） */
+public record CaptchaView(String question) {
 }

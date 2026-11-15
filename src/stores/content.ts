@@ -33,6 +33,7 @@ function mapPost(source: ApiPost): Post {
     hidden: source.status === 'hidden',
     draft: source.status === 'draft',
     public: source.status !== 'draft',
+    likes: source.likes ?? 0,
     source: undefined,
   }
 }

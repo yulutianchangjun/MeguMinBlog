@@ -20,6 +20,8 @@ export interface ApiPost {
   status: 'published' | 'hidden' | 'draft'
   publishedAt?: string
   views?: number
+  /** 服务端点赞总数（按 IP 去重） */
+  likes?: number
   categories: string[]
   collections: string[]
   prevSlug?: string
@@ -170,9 +172,9 @@ export type { ApiError }
 
 export const authApi = {
   /** 登录验证码：服务端生成算术题，答案只在 Redis 里 */
-  captcha: () => http.get<{ id: string; question: string }>('/auth/captcha'),
-  login: (username: string, password: string, captchaId: string, captchaAnswer: string) =>
-    http.post<LoginResult>('/auth/login', { username, password, captchaId, captchaAnswer }),
+  captcha: () => http.get<{ question: string }>('/auth/captcha'),
+  login: (username: string, password: string, captchaAnswer: string) =>
+    http.post<LoginResult>('/auth/login', { username, password, captchaAnswer }),
   logout: () => http.post<void>('/auth/logout'),
   me: () => http.get<ApiUser>('/auth/me'),
 }
@@ -195,6 +197,10 @@ export const publicApi = {
   todayStats: () => http.get<{ date: string; pv: number; uv: number }>('/stats/today'),
   checkin: () => http.get<ApiCheckin>('/checkin'),
   track: (path: string, slug?: string) => http.post<void>('/track', { path, slug }),
+  /** 当前 IP 是否已赞 + 总赞数 */
+  likeStatus: (slug: string) => http.get<{ liked: boolean; total: number }>(`/posts/${encodeURIComponent(slug)}/like`),
+  /** 点赞 / 取消点赞 */
+  toggleLike: (slug: string) => http.post<{ liked: boolean; total: number }>(`/posts/${encodeURIComponent(slug)}/like`),
 }
 
 export const adminApi = {

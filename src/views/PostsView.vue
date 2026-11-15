@@ -57,7 +57,7 @@ const filtered = computed(() => {
 
   list = [...list]
   if (sort.value === 'hot') {
-    list.sort((a, b) => interaction.likeTotal(b.id) - interaction.likeTotal(a.id))
+    list.sort((a, b) => (b.likes ?? 0) - (a.likes ?? 0))
   } else if (sort.value === 'old') {
     list.sort((a, b) => (a.date > b.date ? 1 : -1))
   } else {

@@ -74,8 +74,7 @@ onMounted(() => {
           <span class="eyebrow">Archive</span>
           <h2>全部综集</h2>
         </div>
-
-       
+        
         <div v-if="collections.length" class="arrows">
           <button class="nav-btn" :disabled="active === 0" @click="move(-1)">
             <MagicIcon name="chevronLeft" :size="15" />
@@ -90,8 +89,7 @@ onMounted(() => {
         v-if="!collections.length"
         image="/assets/megumin/empty-state.webp"
         title="还没有综集"
-        description="综集把同一主题的系列手记装订成册。博主可在后台「综集管理」创建第一个综集，再把手记归入其中。"
-        action-text="先去日常流看看"
+        action-text="先去日常看看"
         action-to="/posts"
       />
 
@@ -144,7 +142,7 @@ onMounted(() => {
       <MagicIcon name="spark" :size="14" />
       <p>
         综集按主题固定，不提供全局检索。想找单篇随笔，请去
-        <router-link to="/posts">日常流</router-link>。
+        <router-link to="/posts">日常</router-link>。
       </p>
     </section>
   </div>
