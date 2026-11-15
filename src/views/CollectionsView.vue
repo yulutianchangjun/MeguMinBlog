@@ -8,6 +8,9 @@ const content = useContentStore()
 const track = ref<HTMLElement | null>(null)
 const active = ref(0)
 
+/** 综集未设置封面时使用的默认图 */
+const DEFAULT_COVER = 'assets/megumin/castle-banner.webp'
+
 const collections = computed(() => content.collections)
 
 function countOf(id: string) {
@@ -73,6 +76,8 @@ onMounted(() => {
           <span class="eyebrow">Archive</span>
           <h2>全部综集</h2>
         </div>
+
+       
         <div class="arrows">
           <button class="nav-btn" :disabled="active === 0" @click="move(-1)">
             <MagicIcon name="chevronLeft" :size="15" />
@@ -81,6 +86,12 @@ onMounted(() => {
             <MagicIcon name="chevronRight" :size="15" />
           </button>
         </div>
+        
+         <!-- TODO:完善提示，当没有综集时使用类似下面的效果 -->
+              <!-- <div v-else class="empty">
+      <div class="empty-art">
+        <img src="/assets/megumin/empty-state.webp" alt="没有找到对应的手记" />
+      </div> -->
       </div>
 
       <div ref="track" class="track">
@@ -95,6 +106,10 @@ onMounted(() => {
             <template v-if="item.cover">
               <img class="cover-blur" :src="resolveAsset(item.cover)" alt="" aria-hidden="true" loading="lazy" />
               <img class="cover-main" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
+            </template>
+            <template v-else>
+              <img class="cover-blur" :src="resolveAsset(DEFAULT_COVER)" alt="" aria-hidden="true" loading="lazy" />
+              <img class="cover-main cover-default" :src="resolveAsset(DEFAULT_COVER)" :alt="item.title" loading="lazy" />
             </template>
             <div class="cover-veil"></div>
             <span class="index">{{ String(i + 1).padStart(2, '0') }}</span>

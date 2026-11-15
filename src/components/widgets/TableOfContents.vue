@@ -45,11 +45,6 @@ function jump(id: string) {
       <MagicIcon name="book" :size="18" />
       <p>这篇文章没有小标题</p>
     </div>
-
-    <div class="toc-foot">
-      <MagicIcon name="spark" :size="12" />
-      <span>滚动时自动高亮所在段落</span>
-    </div>
   </section>
 </template>
 

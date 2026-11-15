@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { NConfigProvider, NMessageProvider, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
+import { NConfigProvider, NDialogProvider, NMessageProvider, darkTheme, type GlobalThemeOverrides } from 'naive-ui'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import FireRain from '@/components/layout/FireRain.vue'
@@ -104,13 +104,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
 <template>
   <n-config-provider :theme="darkTheme" :theme-overrides="overrides">
-    <n-message-provider>
+    <n-dialog-provider>
+      <n-message-provider>
       <div class="app-root">
         <FireRain />
         <AppHeader />
         <div class="shell" :class="{ bare }">
           <div class="layout-grid" :class="{ bare }">
-            <!-- TODO: 修改布局，让其能正常渲染全部卡片 -->
             <aside v-if="!bare" class="col-side left left-sidebar-scroll">
               <LeftSidebar />
             </aside>
@@ -132,7 +132,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <LoginModal />
         <AdminPanel />
       </div>
-    </n-message-provider>
+      </n-message-provider>
+    </n-dialog-provider>
   </n-config-provider>
 </template>
 

@@ -6,12 +6,14 @@ import { site } from '@/data/site'
 import { formatDate } from '@/lib/format'
 import { apiReady } from '@/lib/http'
 import { toast } from '@/lib/toast'
+import { useConfirm } from '@/composables/useConfirm'
 import { useAuthStore } from '@/stores/auth'
 import { useInteractionStore } from '@/stores/interaction'
 import type { BoardMessage, BoardTexture, BoardWall } from '@/types'
 
 const interaction = useInteractionStore()
 const auth = useAuthStore()
+const confirm = useConfirm()
 
 const walls: { key: BoardWall; label: string; en: string; hint: string }[] = [
   { key: 'top', label: '上墙', en: 'TOP', hint: '横排 · 最显眼的位置' },
@@ -192,10 +194,11 @@ function finishClose() {
   sourceRect.value = null
 }
 
-function removePreview() {
+async function removePreview() {
   const message = previewMessage.value
   if (!message) return
-  remove(message)
+  const removed = await remove(message)
+  if (!removed) return
   finished = false
   finishClose()
 }
@@ -281,13 +284,21 @@ async function togglePin(message: BoardMessage) {
   }
 }
 
-async function remove(message: BoardMessage) {
+async function remove(message: BoardMessage): Promise<boolean> {
+  const ok = await confirm({
+    title: '取下便签',
+    content: `确定从留言墙取下「${message.author}」的这张便签吗？取下后无法恢复。`,
+    positiveText: '取下便签',
+  })
+  if (!ok) return false
   try {
     await interaction.deleteMessage(message.id)
     if (batches.value > totalBatches.value) batches.value = totalBatches.value
     toast.info('卡片已取下')
+    return true
   } catch (error) {
     toast.error(error instanceof Error ? error.message : '取下失败')
+    return false
   }
 }
 
@@ -308,7 +319,7 @@ onMounted(() => {
   <div class="board-page">
     <header class="head mage-card tint-primary">
       <div class="head-inner">
-        <span class="eyebrow"><i class="tag-dot"></i>Message Board · 软木留言墙</span>
+        <span class="eyebrow"><i class="tag-dot"></i>Message Board · 留言墙</span>
         <h1>钉一张卡，<span class="gold-text">留在这间屋子</span></h1>
         <p>
           三面墙，每面一次只钉 5 张。钉满之后这一批会封存进档案，新的卡片重新开始——

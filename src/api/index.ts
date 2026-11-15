@@ -190,6 +190,7 @@ export const publicApi = {
   createMessage: (payload: MessagePayload) => http.post<ApiMessage>('/messages', payload),
   music: () => http.get<ApiMusic[]>('/music'),
   site: () => http.get<ApiSiteInfo>('/site'),
+  todayStats: () => http.get<{ date: string; pv: number; uv: number }>('/stats/today'),
   checkin: () => http.get<ApiCheckin>('/checkin'),
   track: (path: string, slug?: string) => http.post<void>('/track', { path, slug }),
 }

@@ -7,11 +7,13 @@ import { site } from '@/data/site'
 import { formatDate } from '@/lib/format'
 import { apiReady } from '@/lib/http'
 import { toast } from '@/lib/toast'
+import { useConfirm } from '@/composables/useConfirm'
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{ postId: string }>()
 
 const auth = useAuthStore()
+const confirm = useConfirm()
 const siteKey = site.turnstile.siteKey
 
 const comments = ref<ApiComment[]>([])
@@ -76,10 +78,16 @@ async function submit() {
   }
 }
 
-async function remove(id: number) {
+async function remove(item: ApiComment) {
+  const ok = await confirm({
+    title: '删除评论',
+    content: `确定删除「${item.author}」的这条评论吗？删除后无法恢复。`,
+    positiveText: '删除评论',
+  })
+  if (!ok) return
   try {
-    await adminApi.deleteComment(id)
-    comments.value = comments.value.filter((item) => item.id !== id)
+    await adminApi.deleteComment(item.id)
+    comments.value = comments.value.filter((row) => row.id !== item.id)
     toast.success('评论已删除')
   } catch (error) {
     toast.error(error instanceof Error ? error.message : '删除失败')
@@ -140,7 +148,7 @@ watch(() => props.postId, load)
             v-if="auth.isAdmin"
             class="floor-del"
             title="删除评论"
-            @click="remove(item.id)"
+            @click="remove(item)"
           >
             <MagicIcon name="trash" :size="11" />
           </button>

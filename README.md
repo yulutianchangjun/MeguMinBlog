@@ -18,6 +18,7 @@
 - [创建博主账号](#创建博主账号)
 - [导入示例数据](#导入示例数据)
 - [Docker Compose 部署](#docker-compose-部署)
+- [从零部署教程](#从零部署教程)
 - [个性化配置](#个性化配置)
 - [管理后台](#管理后台)
 - [API 一览](#api-一览)
@@ -146,7 +147,8 @@
 │   ├── nginx/default.conf      # 容器内 nginx
 │   ├── nginx/blog.server.conf  # 宿主机 nginx 生产参考
 │   └── docker-compose.server.yml
-├── docs/服务端部署指南.md        # 完整部署、证书、备份、排错
+├── docs/服务端部署指南.md        # 部署参考手册（命令、证书、备份、排错）
+├── docs/从零部署教程.md          # 新手向：从连服务器讲到上线
 ├── scripts/gen-seed.mjs        # Markdown → seed.sql 生成器
 ├── scripts/hash-password.mjs   # 生成 BCrypt 密码哈希
 └── docker-compose.yml          # 四服务一键启动
@@ -324,7 +326,18 @@ docker compose up -d --build
 
 四个服务：`mysql`、`redis`、`backend`、`frontend`（nginx）。容器首次启动只执行建表，不灌数据；账号与示例数据仍按上面两步手工导入。
 
-部署到公网服务器（HTTPS、证书、域名、备份、排错、性能调优）请看 **[docs/服务端部署指南.md](docs/服务端部署指南.md)**，配置里的 `your-domain.com` 换成你的域名即可。
+部署到公网服务器有两种读法：
+
+- **第一次部署、不熟悉 Linux** → 读 **[docs/从零部署教程.md](docs/从零部署教程.md)**：从连服务器、Linux 目录结构、每条命令的含义讲起，到打包、上传、容器启动、Nginx 与证书，全程按真实操作顺序。
+- **已有经验，只要命令和参数** → 读 **[docs/服务端部署指南.md](docs/服务端部署指南.md)**：环境变量、证书续期、备份恢复、性能调优、排错速查。
+
+配置里的 `your-domain.com` 换成你的域名即可。
+
+---
+
+## 从零部署教程
+
+第一次接触 Linux、不清楚 `dist` 该放哪、没配置过 Nginx？按 **[docs/从零部署教程.md](docs/从零部署教程.md)** 走一遍：SSH 连接与免密登录 → Linux 目录结构与必备命令 → 本地打包 → 上传与校验 → 目录规划与 `docker-compose.yml` 逐段解释 → 数据库初始化 → 启动验证 → Nginx 与 HTTPS 证书 → 更新、备份、回滚 → 排错对照表。每条命令都写了它为什么这么写。
 
 ---
 

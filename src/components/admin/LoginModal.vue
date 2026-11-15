@@ -76,7 +76,7 @@ async function submit() {
 
         <button type="submit" class="btn-magic full" :disabled="auth.loading || !apiReady">
           <MagicIcon name="lock" :size="14" />
-          {{ auth.loading ? '正在校验…' : '登录后台' }}
+          {{ auth.loading ? '正在校验…' : '登录' }}
         </button>
       </form>
 

@@ -586,6 +586,10 @@ function logout() {
                     {{ item.title }}
                   </button>
                 </div>
+                <p v-if="!content.collections.length" class="editor-tip">
+                  <MagicIcon name="spark" :size="11" />
+                  还没有综集，先到「综集管理」创建一个，再回来把文章归入其中。
+                </p>
               </div>
 
               <label class="field">
@@ -607,11 +611,6 @@ function logout() {
                   <MagicIcon name="eye" :size="13" />{{ preview ? '编辑' : '预览' }}
                 </button>
               </div>
-
-              <p class="build-tip">
-                <MagicIcon name="shield" :size="11" />
-                草稿与隐藏都由后端 <code>blog_post.status</code> 控制：草稿前台完全不可见，隐藏不出现在列表但直链可访问。
-              </p>
 
               <div v-if="preview" class="preview-box">
                 <h2 class="preview-title">{{ editing.title || '无题' }}</h2>
@@ -665,7 +664,7 @@ function logout() {
                     <template #trigger>
                       <button class="danger" title="删除"><MagicIcon name="trash" :size="13" /></button>
                     </template>
-                    删除《{{ post.title }}》？删除后立即从站点消失。
+                    删除《{{ post.title }}》？该文章下的评论会一并删除，且无法恢复。
                   </n-popconfirm>
                 </div>
               </li>
@@ -967,7 +966,6 @@ function logout() {
               <div class="mini-head">内容与互动</div>
               <ul class="rank">
                 <li><span class="rank-num">篇</span><span class="rank-path">公开手记</span><em>{{ content.publicPosts.length }}</em></li>
-                <li><span class="rank-num">论</span><span class="rank-path">评论存储</span><em>本站数据库</em></li>
                 <li><span class="rank-num">卡</span><span class="rank-path">留言卡片</span><em>{{ interaction.messages.length }}</em></li>
                 <li><span class="rank-num">赞</span><span class="rank-path">累计点赞</span><em>{{ totalLikes }}</em></li>
                 <li><span class="rank-num">签</span><span class="rank-path">累计签到 / 连续</span><em>{{ profile.totalDays }} / {{ profile.streak }}</em></li>

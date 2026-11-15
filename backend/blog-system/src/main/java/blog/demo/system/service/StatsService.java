@@ -5,6 +5,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import blog.demo.common.dto.TodayStatsView;
 import blog.demo.common.dto.UvDayView;
 import blog.demo.common.dto.UvSummaryView;
 
@@ -49,8 +50,15 @@ public class StatsService {
         }
     }
 
-    public UvSummaryView summary() {
+    /** 今日 PV / UV（公开接口用，前台页头展示「今日访客」） */
+    public TodayStatsView todayStats() {
         LocalDate today = LocalDate.now(ZONE);
+        long pv = parseLong(redis.opsForValue().get("blog:pv:" + today));
+        Long uv = redis.opsForSet().size("blog:uv:" + today);
+        return new TodayStatsView(today.toString(), pv, uv == null ? 0 : uv);
+    }
+
+    public UvSummaryView summary() {        LocalDate today = LocalDate.now(ZONE);
         List<UvDayView> series = new ArrayList<>();
         int activeDays = 0;
         for (int i = 13; i >= 0; i--) {

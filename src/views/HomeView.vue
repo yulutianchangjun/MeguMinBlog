@@ -87,7 +87,7 @@ function goBoard() {
         <div class="hero-actions">
           <router-link to="/posts" class="btn-magic">
             <MagicIcon name="book" :size="15" />
-            翻看日常流
+            翻看日常
           </router-link>
           <router-link to="/collections" class="btn-magic ghost">
             <MagicIcon name="layers" :size="15" />
@@ -108,7 +108,7 @@ function goBoard() {
           <i></i>
           <div>
             <strong>{{ totalMessages }}</strong>
-            <span>墙上的留言</span>
+            <span>留言</span>
           </div>
           <i></i>
           <div>
@@ -141,6 +141,10 @@ function goBoard() {
       <div class="featured">
         <PostCard v-for="post in featured" :key="post.id" :post="post" />
       </div>
+      <div v-if="!featured.length" class="empty-hint mage-card">
+        <MagicIcon name="book" :size="22" />
+        <p>还没有手记,等博主写下第一页</p>
+      </div>
     </section>
 
     <div class="duo">
@@ -150,7 +154,7 @@ function goBoard() {
           <span class="cn">留言</span>
         </div>
         <div class="marquee">
-          <div class="marquee-track">
+          <div class="marquee-track" v-if="marqueeMessages.length">
             <template v-for="round in 2" :key="round">
               <button
                 v-for="msg in marqueeMessages"
@@ -168,9 +172,14 @@ function goBoard() {
               </button>
             </template>
           </div>
+
+          <!-- TODO:完善这里 -->
+          <div v-else>
+            暂无留言
+          </div>
         </div>
         <div class="board-foot">
-          <span>共 {{ totalMessages }} 张卡片钉在三面墙上</span>
+          <span>共 {{ totalMessages }} 张卡片钉在留言墙上</span>
           <button class="btn-magic ghost small" @click="goBoard">
             <MagicIcon name="pin" :size="13" />
             去留言
@@ -206,7 +215,7 @@ function goBoard() {
               :class="{ on: badge.achieved }"
               :title="`${badge.label} · ${badge.desc}`"
             >
-              <MagicIcon :name="badge.icon" :size="14" />
+              <MagicIcon :name="badge.icon" :size="25" />
             </span>
           </div>
           <div class="next">
@@ -264,6 +273,10 @@ function goBoard() {
             </span>
           </div>
         </router-link>
+      </div>
+      <div v-if="!content.collections.length" class="empty-hint mage-card">
+        <MagicIcon name="layers" :size="22" />
+        <p>还没有综集</p>
       </div>
     </section>
   </div>
@@ -954,6 +967,31 @@ function goBoard() {
   .duo {
     grid-template-columns: 1fr;
   }
+}
+
+.empty-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 34px 24px;
+  text-align: center;
+  color: var(--c-text-2);
+}
+
+.empty-hint p {
+  margin: 0;
+  max-width: 460px;
+  font-size: 12.5px;
+  line-height: 1.9;
+}
+
+.empty-hint .more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--c-gold);
 }
 
 @media (max-width: 720px) {

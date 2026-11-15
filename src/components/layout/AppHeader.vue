@@ -2,17 +2,32 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import { publicApi } from '@/api'
 import { site } from '@/data/site'
 import { useAuthStore } from '@/stores/auth'
 import { useUiStore } from '@/stores/ui'
-import { useProfileStore } from '@/stores/profile'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const ui = useUiStore()
-const profile = useProfileStore()
 const scrolled = ref(false)
+/** 今日访客数：走公开接口，访客与博主都能看到，每 60 秒自动刷新 */
+const todayUv = ref(0)
+let uvTimer: number | undefined
+
+async function loadTodayUv() {
+  try {
+    const stats = await publicApi.todayStats()
+    todayUv.value = stats.uv
+  } catch {
+    // 后端不可用时保持上一次数值，不打扰访客
+  }
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') void loadTodayUv()
+}
 
 const nav = [
   { label: '首页', en: 'Home', path: '/', icon: 'home' },
@@ -24,8 +39,6 @@ const nav = [
 
 const isActive = (path: string) =>
   path === '/' ? route.path === '/' : route.path.startsWith(path)
-
-const todayUv = computed(() => profile.uvSummary.todayUv)
 
 function go(path: string) {
   ui.mobileNavOpen = false
@@ -43,9 +56,16 @@ function handleScroll() {
 onMounted(() => {
   handleScroll()
   window.addEventListener('scroll', handleScroll, { passive: true })
+  void loadTodayUv()
+  uvTimer = window.setInterval(loadTodayUv, 60_000)
+  document.addEventListener('visibilitychange', onVisibilityChange)
 })
 
-onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  if (uvTimer) window.clearInterval(uvTimer)
+})
 </script>
 
 <template>
@@ -76,7 +96,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', handleScroll))
       </nav>
 
       <div class="actions">
-        <span class="visitors" :title="`今日独立访客 ${todayUv}`">
+        <span class="visitors" :title="`今日访客 ${todayUv}`">
           <span class="pulse"></span>
           <MagicIcon name="eye" :size="14" />
           <span class="num">{{ String(todayUv).padStart(2, '0') }}</span>

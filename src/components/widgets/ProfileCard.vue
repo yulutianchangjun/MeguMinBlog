@@ -92,7 +92,7 @@ onBeforeUnmount(() => window.clearTimeout(clickTimer))
           :class="{ on: badge.achieved }"
           :title="`${badge.label} · ${badge.desc}`"
         >
-          <MagicIcon :name="badge.icon" :size="13" />
+          <MagicIcon :name="badge.icon" :size="25" />
         </span>
         <span class="badge-text">
           {{ profile.nextBadge ? `下一个徽章：${profile.nextBadge.label}` : '全部徽章已点亮' }}
@@ -104,7 +104,7 @@ onBeforeUnmount(() => window.clearTimeout(clickTimer))
       <div class="actions">
         <button v-if="auth.isAdmin" class="btn-magic checkin" :disabled="profile.checkedToday" @click="checkin">
           <MagicIcon name="flame" :size="15" />
-          {{ profile.checkedToday ? '今日已签到' : '签到打卡' }}
+          <span>{{ profile.checkedToday ? '今日已签到' : '签到打卡' }}</span>
         </button>
         <span v-else class="guest-note">
           <MagicIcon name="flame" :size="14" />
@@ -338,6 +338,10 @@ onBeforeUnmount(() => window.clearTimeout(clickTimer))
   flex: 1;
   padding: 8px 12px;
   font-size: 12px;
+}
+
+.checkin span{
+  font-size: 10px;
 }
 
 .checkin:disabled {
