@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { resolveAsset } from '@/lib/asset'
 import { useContentStore } from '@/stores/content'
 
 const content = useContentStore()
 const track = ref<HTMLElement | null>(null)
 const active = ref(0)
-
-/** 综集未设置封面时使用的默认图 */
-const DEFAULT_COVER = 'assets/megumin/castle-banner.webp'
 
 const collections = computed(() => content.collections)
 
@@ -78,7 +76,7 @@ onMounted(() => {
         </div>
 
        
-        <div class="arrows">
+        <div v-if="collections.length" class="arrows">
           <button class="nav-btn" :disabled="active === 0" @click="move(-1)">
             <MagicIcon name="chevronLeft" :size="15" />
           </button>
@@ -86,15 +84,18 @@ onMounted(() => {
             <MagicIcon name="chevronRight" :size="15" />
           </button>
         </div>
-        
-         <!-- TODO:完善提示，当没有综集时使用类似下面的效果 -->
-              <!-- <div v-else class="empty">
-      <div class="empty-art">
-        <img src="/assets/megumin/empty-state.webp" alt="没有找到对应的手记" />
-      </div> -->
       </div>
 
-      <div ref="track" class="track">
+      <EmptyState
+        v-if="!collections.length"
+        image="/assets/megumin/empty-state.webp"
+        title="还没有综集"
+        description="综集把同一主题的系列手记装订成册。博主可在后台「综集管理」创建第一个综集，再把手记归入其中。"
+        action-text="先去日常流看看"
+        action-to="/posts"
+      />
+
+      <div v-else ref="track" class="track">
         <router-link
           v-for="(item, i) in collections"
           :key="item.id"
@@ -103,13 +104,10 @@ onMounted(() => {
           :class="{ dim: i !== active }"
         >
           <div class="cover">
+            <!-- 封面由后端保证非空（未选时写入默认图），前端不再自行兜底 -->
             <template v-if="item.cover">
               <img class="cover-blur" :src="resolveAsset(item.cover)" alt="" aria-hidden="true" loading="lazy" />
               <img class="cover-main" :src="resolveAsset(item.cover)" :alt="item.title" loading="lazy" />
-            </template>
-            <template v-else>
-              <img class="cover-blur" :src="resolveAsset(DEFAULT_COVER)" alt="" aria-hidden="true" loading="lazy" />
-              <img class="cover-main cover-default" :src="resolveAsset(DEFAULT_COVER)" :alt="item.title" loading="lazy" />
             </template>
             <div class="cover-veil"></div>
             <span class="index">{{ String(i + 1).padStart(2, '0') }}</span>
@@ -130,7 +128,7 @@ onMounted(() => {
         </router-link>
       </div>
 
-      <div class="dots">
+      <div v-if="collections.length" class="dots">
         <button
           v-for="(item, i) in collections"
           :key="item.id"

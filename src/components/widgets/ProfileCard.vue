@@ -335,7 +335,6 @@ onBeforeUnmount(() => window.clearTimeout(clickTimer))
 
 .checkin,
 .about-btn {
-  flex: 1;
   padding: 8px 12px;
   font-size: 12px;
 }

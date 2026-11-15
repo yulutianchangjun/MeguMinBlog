@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import TurnstileWidget from '@/components/post/TurnstileWidget.vue'
 import { publicApi, adminApi, type ApiComment } from '@/api'
 import { site } from '@/data/site'
@@ -138,7 +139,13 @@ watch(() => props.postId, load)
 
     <div class="thread">
       <p v-if="loading" class="empty">正在取回评论…</p>
-      <p v-else-if="!comments.length" class="empty">还没有人留下评论，第一层楼留给你。</p>
+      <EmptyState
+        v-else-if="!comments.length"
+        compact
+        icon="comment"
+        title="还没有人留下评论"
+        description="第一层楼留给你。"
+      />
       <article v-for="(item, index) in comments" :key="item.id" class="floor">
         <div class="floor-head">
           <span class="floor-no">#{{ index + 1 }}</span>

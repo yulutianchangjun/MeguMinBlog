@@ -169,8 +169,10 @@ export interface MessagePayload {
 export type { ApiError }
 
 export const authApi = {
-  login: (username: string, password: string) =>
-    http.post<LoginResult>('/auth/login', { username, password }),
+  /** 登录验证码：服务端生成算术题，答案只在 Redis 里 */
+  captcha: () => http.get<{ id: string; question: string }>('/auth/captcha'),
+  login: (username: string, password: string, captchaId: string, captchaAnswer: string) =>
+    http.post<LoginResult>('/auth/login', { username, password, captchaId, captchaAnswer }),
   logout: () => http.post<void>('/auth/logout'),
   me: () => http.get<ApiUser>('/auth/me'),
 }

@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import blog.demo.common.core.Constants;
 import blog.demo.common.exception.BizException;
 import blog.demo.common.dto.CollectionRequest;
 import blog.demo.common.dto.CollectionView;
@@ -60,7 +61,9 @@ public class CollectionService {
         collection.setTitle(request.getTitle().trim());
         collection.setSubtitle(trimToNull(request.getSubtitle()));
         collection.setDescription(trimToNull(request.getDescription()));
-        collection.setCover(trimToNull(request.getCover()));
+        // 未选封面时写入默认图，让"有封面"成为数据库层面的保证，前端不再各自兜底
+        String cover = trimToNull(request.getCover());
+        collection.setCover(cover == null ? Constants.DEFAULT_COLLECTION_COVER : cover);
         collection.setRunes(trimToNull(request.getRunes()));
         collection.setSort(request.getSort() == null ? 99 : request.getSort());
         collection.setSlug(uniqueSlug(request.getSlug(), collection.getTitle(), collection.getId()));
@@ -83,13 +86,17 @@ public class CollectionService {
     }
 
     private CollectionView toView(BlogCollection collection) {
+        // 历史数据可能没有 cover，返回时补默认值，避免调用方拿到 null 再各自处理
+        String cover = StringUtils.hasText(collection.getCover())
+                ? collection.getCover()
+                : Constants.DEFAULT_COLLECTION_COVER;
         return new CollectionView(
                 collection.getId(),
                 collection.getSlug(),
                 collection.getTitle(),
                 collection.getSubtitle(),
                 collection.getDescription(),
-                collection.getCover(),
+                cover,
                 collection.getRunes(),
                 collection.getSort(),
                 collectionMapper.countPublishedPosts(collection.getId()));

@@ -10,6 +10,7 @@ import blog.demo.common.dto.LoginResponse;
 import blog.demo.common.dto.UserView;
 import blog.demo.system.domain.SysUser;
 import blog.demo.system.mapper.SysUserMapper;
+import blog.demo.framework.security.CaptchaService;
 import blog.demo.framework.security.JwtService;
 import blog.demo.framework.security.TokenStore;
 
@@ -21,8 +22,11 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TokenStore tokenStore;
+    private final CaptchaService captchaService;
 
     public LoginResponse login(LoginRequest request) {
+        // 先校验算术验证码（一次性，校验即销毁），再查库比对密码
+        captchaService.verify(request.captchaId(), request.captchaAnswer());
         SysUser user = userMapper.selectOne(
                 new QueryWrapper<SysUser>().eq("username", request.username().trim()).last("LIMIT 1"));
         if (user == null || !passwordEncoder.matches(request.password(), user.getPassword())) {

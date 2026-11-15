@@ -28,7 +28,7 @@ const categories = computed(() => {
   <div class="collection-detail">
     <template v-if="collection">
       <header class="hero mage-card" :class="{ plain: !cover }">
-        <!-- TODO:同步未选封面时回退到主题默认图 -->
+        <!-- cover 由后端保证：综集未选封面时保存阶段已写入默认图 -->
         <img v-if="cover" :src="cover" class="hero-bg" :alt="collection.title" />
         <div class="hero-veil"></div>
         <span class="hero-rune">{{ collection.runes }}</span>

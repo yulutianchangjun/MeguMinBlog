@@ -11,11 +11,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import blog.demo.common.core.ApiResponse;
 import blog.demo.common.exception.BizException;
+import blog.demo.common.dto.CaptchaView;
 import blog.demo.common.dto.LoginRequest;
 import blog.demo.common.dto.LoginResponse;
 import blog.demo.common.dto.PasswordRequest;
 import blog.demo.common.dto.UserView;
+import blog.demo.common.utils.ClientIp;
+import blog.demo.framework.security.CaptchaService;
 import blog.demo.framework.security.JwtService;
+import blog.demo.framework.security.RateLimiter;
 import blog.demo.framework.security.TokenStore;
 import blog.demo.framework.security.TokenStoreSupport;
 import blog.demo.system.service.AuthService;
@@ -28,6 +32,15 @@ public class AuthController {
     private final AuthService authService;
     private final JwtService jwtService;
     private final TokenStore tokenStore;
+    private final CaptchaService captchaService;
+    private final RateLimiter rateLimiter;
+
+    /** 登录前先取一道算术验证码（答案只在服务端 Redis 里，2 分钟有效） */
+    @GetMapping("/captcha")
+    public ApiResponse<CaptchaView> captcha(HttpServletRequest request) {
+        rateLimiter.checkCaptcha(ClientIp.of(request));
+        return ApiResponse.ok(captchaService.create());
+    }
 
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {

@@ -38,16 +38,54 @@ public class StatsService {
         if (pv != null && pv == 1L) {
             redis.expire(pvKey, KEEP);
         }
-        String uvKey = "blog:uv:" + today;
-        redis.opsForSet().add(UV_ALL, ip);
-        redis.opsForSet().add(uvKey, ip);
-        redis.expire(uvKey, KEEP);
+        // UV 只统计可辨识的公网 IP：同一 IP 当天只进一次 Set，内网/本机地址不计入
+        if (countableIp(ip)) {
+            String uvKey = "blog:uv:" + today;
+            redis.opsForSet().add(UV_ALL, ip);
+            redis.opsForSet().add(uvKey, ip);
+            redis.expire(uvKey, KEEP);
+        }
 
         redis.opsForHash().increment(PAGES_TOP, path, 1);
 
         if (StringUtils.hasText(slug)) {
             jdbc.update("UPDATE blog_post SET views = views + 1 WHERE slug = ?", slug);
         }
+    }
+
+    /**
+     * 是否是可计入 UV 的访问来源。
+     * 排除空值、unknown、回环地址与内网网段，避免本地调试、容器健康检查、内网探活把 UV 注水。
+     */
+    private boolean countableIp(String ip) {
+        if (!StringUtils.hasText(ip)) {
+            return false;
+        }
+        String value = ip.trim();
+        if (value.isEmpty() || "unknown".equalsIgnoreCase(value)) {
+            return false;
+        }
+        if ("127.0.0.1".equals(value) || "0.0.0.0".equals(value) || "::1".equals(value)) {
+            return false;
+        }
+        if (value.startsWith("10.") || value.startsWith("192.168.")) {
+            return false;
+        }
+        if (value.startsWith("172.")) {
+            // 172.16.0.0 ~ 172.31.255.255 为内网
+            String[] parts = value.split("\\.");
+            if (parts.length > 1) {
+                try {
+                    int second = Integer.parseInt(parts[1]);
+                    if (second >= 16 && second <= 31) {
+                        return false;
+                    }
+                } catch (NumberFormatException ignored) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /** 今日 PV / UV（公开接口用，前台页头展示「今日访客」） */

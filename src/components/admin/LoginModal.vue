@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { NModal } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import { authApi } from '@/api'
 import { API_BASE, apiReady } from '@/lib/http'
 import { toast } from '@/lib/toast'
 import { useAuthStore } from '@/stores/auth'
@@ -17,6 +18,25 @@ const show = computed({
 
 const username = ref('')
 const password = ref('')
+const captcha = ref<{ id: string; question: string } | null>(null)
+const captchaAnswer = ref('')
+const captchaLoading = ref(false)
+
+async function loadCaptcha() {
+  if (!apiReady) {
+    captcha.value = null
+    return
+  }
+  captchaLoading.value = true
+  try {
+    captcha.value = await authApi.captcha()
+    captchaAnswer.value = ''
+  } catch {
+    captcha.value = null
+  } finally {
+    captchaLoading.value = false
+  }
+}
 
 watch(
   () => ui.loginOpen,
@@ -25,6 +45,7 @@ watch(
       auth.error = ''
       username.value = ''
       password.value = ''
+      void loadCaptcha()
     }
   },
 )
@@ -34,12 +55,29 @@ async function submit() {
     toast.warning('请输入账号与密码')
     return
   }
-  const ok = await auth.loginWithPassword(username.value, password.value)
+  if (!captcha.value) {
+    toast.warning('请等待验证码加载')
+    return
+  }
+  if (!captchaAnswer.value.trim()) {
+    toast.warning('请填写验证码答案')
+    return
+  }
+  const ok = await auth.loginWithPassword(
+    username.value,
+    password.value,
+    captcha.value.id,
+    captchaAnswer.value,
+  )
   if (ok) {
     password.value = ''
+    captchaAnswer.value = ''
     ui.closeLogin()
     ui.openAdmin('posts')
     toast.success(`欢迎回来，${auth.user?.nickname || auth.login}`)
+  } else {
+    // 验证码一次性，失败后必须换一题再试
+    void loadCaptcha()
   }
 }
 </script>
@@ -70,6 +108,38 @@ async function submit() {
             autocomplete="current-password"
             placeholder="请输入密码"
           />
+        </label>
+
+        <label class="field">
+          <span>验证码</span>
+          <div class="captcha-row">
+            <button
+              type="button"
+              class="captcha-question"
+              :disabled="captchaLoading"
+              title="点击换一题"
+              @click="loadCaptcha"
+            >
+              {{ captchaLoading ? '生成中…' : captcha?.question || '点击获取' }}
+            </button>
+            <input
+              v-model="captchaAnswer"
+              class="captcha-input"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="4"
+              placeholder="答案"
+            />
+            <button
+              type="button"
+              class="captcha-refresh"
+              :disabled="captchaLoading"
+              title="换一题"
+              @click="loadCaptcha"
+            >
+              <MagicIcon name="refresh" :size="13" />
+            </button>
+          </div>
         </label>
 
         <p v-if="auth.error" class="error">{{ auth.error }}</p>
@@ -208,6 +278,64 @@ async function submit() {
   font-size: 9.5px;
   letter-spacing: 0.08em;
   color: var(--c-gold);
+}
+
+/* —— 算术验证码 —— */
+.captcha-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.captcha-question {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px dashed rgba(217, 172, 88, 0.42);
+  background: rgba(217, 172, 88, 0.07);
+  color: var(--c-gold-2);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.captcha-question:hover:not(:disabled) {
+  border-color: rgba(217, 172, 88, 0.72);
+  background: rgba(217, 172, 88, 0.12);
+}
+
+.captcha-question:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.field input.captcha-input {
+  width: 78px;
+  flex: none;
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+}
+
+.captcha-refresh {
+  flex: none;
+  width: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  border: 1px solid rgba(217, 172, 88, 0.24);
+  background: rgba(12, 9, 16, 0.75);
+  color: var(--c-text-2);
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+
+.captcha-refresh:hover:not(:disabled) {
+  color: var(--c-gold-2);
+  border-color: rgba(217, 172, 88, 0.55);
 }
 
 .field input {

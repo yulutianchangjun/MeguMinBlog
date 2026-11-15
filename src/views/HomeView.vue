@@ -6,6 +6,7 @@ import FireRain from '@/components/layout/FireRain.vue'
 import { resolveAsset } from '@/lib/asset'
 import TypewriterText from '@/components/common/TypewriterText.vue'
 import PostCard from '@/components/post/PostCard.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { site } from '@/data/site'
 import { useAuthStore } from '@/stores/auth'
 import { useContentStore } from '@/stores/content'
@@ -141,10 +142,14 @@ function goBoard() {
       <div class="featured">
         <PostCard v-for="post in featured" :key="post.id" :post="post" />
       </div>
-      <div v-if="!featured.length" class="empty-hint mage-card">
-        <MagicIcon name="book" :size="22" />
-        <p>还没有手记,等博主写下第一页</p>
-      </div>
+      <EmptyState
+        v-if="!featured.length"
+        icon="book"
+        title="还没有手记"
+        description="等博主写下第一页，或者去「日常流」翻翻更早的记录。"
+        action-text="去日常流看看"
+        action-to="/posts"
+      />
     </section>
 
     <div class="duo">
@@ -173,10 +178,15 @@ function goBoard() {
             </template>
           </div>
 
-          <!-- TODO:完善这里 -->
-          <div v-else>
-            暂无留言
-          </div>
+          <EmptyState
+            v-else
+            compact
+            icon="pin"
+            title="留言墙还是空的"
+            description="成为第一个留下便签的人。"
+            action-text="去留言"
+            action-to="/board"
+          />
         </div>
         <div class="board-foot">
           <span>共 {{ totalMessages }} 张卡片钉在留言墙上</span>
@@ -274,10 +284,12 @@ function goBoard() {
           </div>
         </router-link>
       </div>
-      <div v-if="!content.collections.length" class="empty-hint mage-card">
-        <MagicIcon name="layers" :size="22" />
-        <p>还没有综集</p>
-      </div>
+      <EmptyState
+        v-if="!content.collections.length"
+        icon="layers"
+        title="还没有综集"
+        description="综集把同一主题的系列手记收在一起。博主可在后台「综集管理」创建第一个综集。"
+      />
     </section>
   </div>
 </template>
@@ -969,30 +981,6 @@ function goBoard() {
   }
 }
 
-.empty-hint {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 34px 24px;
-  text-align: center;
-  color: var(--c-text-2);
-}
-
-.empty-hint p {
-  margin: 0;
-  max-width: 460px;
-  font-size: 12.5px;
-  line-height: 1.9;
-}
-
-.empty-hint .more {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--c-gold);
-}
 
 @media (max-width: 720px) {
   .featured,

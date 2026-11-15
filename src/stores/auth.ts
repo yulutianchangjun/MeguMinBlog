@@ -53,7 +53,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /** 账号密码登录：后端校验 sys_user 后签发 JWT，并在 Redis 里维护会话白名单 */
-  async function loginWithPassword(username: string, password: string): Promise<boolean> {
+  async function loginWithPassword(
+    username: string,
+    password: string,
+    captchaId: string,
+    captchaAnswer: string,
+  ): Promise<boolean> {
     error.value = ''
     if (!apiReady) {
       error.value = '未配置后端地址（VITE_API_BASE_URL），当前为只读静态模式'
@@ -61,7 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
     loading.value = true
     try {
-      const result = await authApi.login(username.trim(), password)
+      const result = await authApi.login(username.trim(), password, captchaId, captchaAnswer)
       tokenStore.set(result.token)
       persist(toAuthUser(result.user))
       return true

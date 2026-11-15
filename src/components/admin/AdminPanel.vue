@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDrawer, NPopconfirm } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
@@ -33,6 +33,21 @@ const show = computed({
   get: () => ui.adminOpen,
   set: (value: boolean) => (value ? ui.openAdmin() : ui.closeAdmin()),
 })
+
+// —— 设备适配：抽屉宽度跟随视口，手机全屏、平板 92%、桌面固定 780 ——
+const viewportWidth = ref(typeof window === 'undefined' ? 1440 : window.innerWidth)
+const drawerWidth = computed(() => {
+  if (viewportWidth.value <= 720) return '100%'
+  if (viewportWidth.value <= 1100) return '92%'
+  return '780px'
+})
+
+function syncViewport() {
+  viewportWidth.value = window.innerWidth
+}
+
+onMounted(() => window.addEventListener('resize', syncViewport))
+onBeforeUnmount(() => window.removeEventListener('resize', syncViewport))
 
 const tabs: { key: AdminTab; label: string; en: string; icon: string }[] = [
   { key: 'posts', label: '文章管理', en: 'Posts', icon: 'book' },
@@ -283,7 +298,7 @@ async function save() {
 async function remove(post: Post) {
   try {
     await content.deletePost(post)
-    toast.info(`已提交删除《${post.title}》，部署后消失`)
+    toast.info(`已删除《${post.title}》`)
   } catch (error) {
     toast.error(error instanceof Error ? error.message : '删除失败')
   }
@@ -486,7 +501,7 @@ function logout() {
   <n-drawer
     v-model:show="show"
     placement="right"
-    :width="780"
+    :width="drawerWidth"
     :trap-focus="false"
     :header-style="{ display: 'none' }"
     :content-style="{ background: '#181320', padding: 0 }"
@@ -912,11 +927,11 @@ function logout() {
         <template v-else>
           <div class="stat-grid">
             <div class="stat-card">
-              <span>总浏览量 PV</span>
+              <span>总浏览量</span>
               <strong>{{ profile.uvSummary.pv }}</strong>
             </div>
             <div class="stat-card">
-              <span>独立访客 UV</span>
+              <span>访客</span>
               <strong>{{ profile.uvSummary.uv }}</strong>
             </div>
             <div class="stat-card">
@@ -973,10 +988,10 @@ function logout() {
             </section>
           </div>
 
-          <p class="stat-note">
+          <!-- <p class="stat-note">
             <MagicIcon name="eye" :size="11" />
-            统计基于本浏览器内的访问记录（无后端、无埋点脚本），仅用于展示仪表盘效果。
-          </p>
+            PV / UV 均由服务端统计：PV 为页面访问次数累加，UV 按访问 IP 去重（同一 IP 当天只计一次），数据存 Redis 保留 120 天。点赞数来自本浏览器记录。
+          </p> -->
         </template>
       </div>
     </div>
@@ -1075,9 +1090,24 @@ function logout() {
   gap: 4px;
   padding: 12px 20px 0;
   border-bottom: 1px solid rgba(217, 172, 88, 0.12);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(217, 172, 88, 0.35);
 }
 
 .tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1799,6 +1829,87 @@ function logout() {
   }
   .summary {
     flex-wrap: wrap;
+  }
+
+  /* —— 手机端：抽屉全宽，内容单列，触控目标加大 —— */
+  .admin-head {
+    padding: 12px 14px;
+  }
+
+  .admin-head strong {
+    font-size: 13px;
+  }
+
+  .head-left span {
+    font-size: 9.5px;
+  }
+
+  .tabs {
+    padding: 8px 12px 0;
+  }
+
+  .tab {
+    padding: 8px 11px;
+    font-size: 11.5px;
+  }
+
+  .admin-body {
+    padding: 14px 12px 36px;
+  }
+
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  /* 列表行：操作按钮换到下一行，避免挤出屏幕 */
+  .post-row {
+    flex-wrap: wrap;
+  }
+
+  .row-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 6px;
+  }
+
+  .row-actions button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .post-row .row-title strong {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  /* 表单控件：16px 可避免 iOS 聚焦时自动放大页面 */
+  .field input,
+  .field textarea,
+  .field select,
+  .admin input[type='text'],
+  .admin input[type='date'],
+  .admin input:not([type]) {
+    font-size: 16px;
+  }
+
+  .chips {
+    flex-wrap: wrap;
+  }
+
+  .editor-tip,
+  .empty-tip {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .head-left .seal {
+    width: 28px;
+    height: 28px;
   }
 }
 </style>
