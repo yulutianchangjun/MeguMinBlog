@@ -2,9 +2,11 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
+import ImageLightbox from '@/components/common/ImageLightbox.vue'
 import CommentSection from '@/components/post/CommentSection.vue'
 import { publicApi } from '@/api'
 import { renderMarkdown, readingMinutes } from '@/lib/markdown'
+import { renderMermaidBlocks } from '@/lib/mermaid'
 import { resolveAsset } from '@/lib/asset'
 import { formatDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
@@ -22,6 +24,8 @@ const auth = useAuthStore()
 
 const showTop = ref(false)
 const likeBurst = ref(false)
+const proseRef = ref<HTMLElement | null>(null)
+const lightbox = ref<{ src: string; alt: string } | null>(null)
 
 const post = computed(() => content.allPosts.find((item) => item.id === route.params.id))
 const accessible = computed(() => {
@@ -69,9 +73,19 @@ watch(
     reading.setToc(rendered.value.toc)
     await nextTick()
     syncScroll()
+    // 正文里的 ```mermaid 块在挂载后按需渲染成 SVG
+    void renderMermaidBlocks(proseRef.value)
   },
   { immediate: true },
 )
+
+/** 点击正文图片打开灯箱预览 */
+function onProseClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  if (target instanceof HTMLImageElement && target.classList.contains('md-image')) {
+    lightbox.value = { src: target.currentSrc || target.src, alt: target.alt }
+  }
+}
 
 watch(
   () => route.params.id,
@@ -209,7 +223,13 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="body mage-card paper-veil">
-      <div class="prose" v-html="rendered.html"></div>
+      <div ref="proseRef" class="prose" v-html="rendered.html" @click="onProseClick"></div>
+
+      <ImageLightbox
+        :src="lightbox?.src || ''"
+        :alt="lightbox?.alt || ''"
+        @close="lightbox = null"
+      />
 
       <div v-if="post.tags.length" class="tags">
         <MagicIcon name="spark" :size="12" />

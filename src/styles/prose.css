@@ -243,3 +243,87 @@
 .prose .hljs-function .hljs-title {
   color: #f0d79b;
 }
+
+/* ---------- 图片：figure + 图注 + 点击放大 ---------- */
+.prose figure.md-figure {
+  margin: 1.7em 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.prose figure.md-figure img {
+  margin: 0;
+  max-width: 100%;
+  max-height: 78vh;
+  object-fit: contain;
+  cursor: zoom-in;
+  transition: transform 0.24s var(--ease), border-color 0.24s var(--ease);
+}
+
+.prose figure.md-figure img:hover {
+  transform: translateY(-1px);
+  border-color: rgba(217, 172, 88, 0.42);
+}
+
+.prose figure.md-figure figcaption {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: var(--c-text-3);
+  text-align: center;
+  line-height: 1.7;
+}
+
+/* ---------- Mermaid 图表 ---------- */
+.prose .mermaid-wrap {
+  margin: 1.8em 0;
+  padding: 16px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid rgba(217, 172, 88, 0.16);
+  background: rgba(18, 15, 23, 0.72);
+  overflow-x: auto;
+}
+
+.prose .mermaid-wrap pre.mermaid {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--c-text-2);
+  white-space: pre-wrap;
+  overflow: visible;
+}
+
+.prose .mermaid-wrap pre.mermaid::before {
+  display: none;
+}
+
+.prose .mermaid-wrap pre.mermaid.mermaid-done {
+  white-space: normal;
+}
+
+.prose .mermaid-wrap pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+}
+
+.prose .mermaid-wrap pre.mermaid.mermaid-error {
+  text-align: left;
+  border-left: 2px solid #a52a36;
+  padding-left: 12px;
+}
+
+.prose .mermaid-wrap pre.mermaid .mermaid-error-tip {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: #e2687a;
+}

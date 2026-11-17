@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDrawer, NPopconfirm } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import ImageUploader from '@/components/admin/ImageUploader.vue'
+import { adminApi } from '@/api'
 import { exportJson, exportZip, parseImportFile } from '@/lib/exporter'
 import { formatDate } from '@/lib/format'
 import { API_BASE, apiReady } from '@/lib/http'
+import { fileToCoverBlob } from '@/lib/image'
 import { renderMarkdown, slugify } from '@/lib/markdown'
+import { renderMermaidBlocks } from '@/lib/mermaid'
 import { postFromMarkdown } from '@/lib/post'
 import { resolveAsset } from '@/lib/asset'
 import { STORAGE_PREFIX } from '@/lib/storage'
@@ -173,6 +176,104 @@ const maxPv = computed(() => Math.max(1, ...profile.uvSeries.map((day) => day.pv
 const hiddenCount = computed(() => content.allPosts.filter((p) => p.hidden || p.draft).length)
 
 const previewHtml = computed(() => (editing.value ? renderMarkdown(editing.value.content).html : ''))
+
+// —— 正文编辑器：插入图片 / 图表 / 代码块 ——
+const mdInputRef = ref<HTMLTextAreaElement | null>(null)
+const mdImageInput = ref<HTMLInputElement | null>(null)
+const previewRef = ref<HTMLElement | null>(null)
+const mdUploading = ref(false)
+
+/** 在光标处插入一段 Markdown，并保持光标落在插入内容之后 */
+function insertAtCursor(snippet: string) {
+  const target = editing.value
+  if (!target) return
+  const el = mdInputRef.value
+  if (!el) {
+    target.content = `${target.content}${target.content.endsWith('\n') ? '' : '\n'}${snippet}\n`
+    return
+  }
+  const start = el.selectionStart ?? target.content.length
+  const end = el.selectionEnd ?? start
+  const before = target.content.slice(0, start)
+  const after = target.content.slice(end)
+  // 前后各留一个换行，避免插图后与相邻段落粘连
+  const prefix = before === '' || before.endsWith('\n') ? '' : '\n'
+  const suffix = after.startsWith('\n') || after === '' ? '' : '\n'
+  const inserted = `${before}${prefix}${snippet}${suffix}${after}`
+  target.content = inserted
+  nextTick(() => {
+    const caret = (before + prefix + snippet + suffix).length
+    el.focus()
+    el.setSelectionRange(caret, caret)
+  })
+}
+
+/** 压缩后上传，拿到 /uploads/xxx 再插入 Markdown 图片语法 */
+async function uploadInlineImage(file: File) {
+  if (!apiReady) {
+    toast.warning('未连接后端，无法上传图片')
+    return
+  }
+  if (!file.type.startsWith('image/')) {
+    toast.warning('只能插入图片文件')
+    return
+  }
+  mdUploading.value = true
+  try {
+    const compressed = await fileToCoverBlob(file)
+    const uploadFile = new File([compressed.blob], `inline.${compressed.ext}`, {
+      type: compressed.blob.type,
+    })
+    const uploaded = await adminApi.upload(uploadFile)
+    const alt = file.name.replace(/\.[^.]+$/, '') || '插图'
+    insertAtCursor(`![${alt}](${uploaded.url})`)
+    toast.success('图片已插入正文')
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : '图片上传失败')
+  } finally {
+    mdUploading.value = false
+  }
+}
+
+function onMdImagePick(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (file) void uploadInlineImage(file)
+}
+
+/** 粘贴截图：直接上传后插入，不把二进制塞进正文 */
+function onMdPaste(event: ClipboardEvent) {
+  const items = Array.from(event.clipboardData?.items ?? [])
+  const image = items.find((item) => item.type.startsWith('image/'))?.getAsFile()
+  if (image) {
+    event.preventDefault()
+    void uploadInlineImage(image)
+  }
+}
+
+/** 拖拽图片到编辑器 */
+function onMdDrop(event: DragEvent) {
+  const file = Array.from(event.dataTransfer?.files ?? []).find((f) => f.type.startsWith('image/'))
+  if (file) void uploadInlineImage(file)
+}
+
+function insertMermaidTemplate() {
+  insertAtCursor(
+    '```mermaid\nflowchart TD\n  A[开始] --> B{判断条件}\n  B -->|满足| C[执行分支]\n  B -->|不满足| D[结束]\n```',
+  )
+}
+
+function insertCodeBlock() {
+  insertAtCursor('```ts\n// 在这里写代码\n```')
+}
+
+// 预览里的 mermaid 也要渲染成图
+watch([preview, previewHtml], async () => {
+  if (!preview.value) return
+  await nextTick()
+  void renderMermaidBlocks(previewRef.value)
+})
 
 const draftCollections = computed(() => editing.value?.collections ?? [])
 
@@ -629,12 +730,48 @@ function logout() {
 
               <div v-if="preview" class="preview-box">
                 <h2 class="preview-title">{{ editing.title || '无题' }}</h2>
-                <div class="prose" v-html="previewHtml"></div>
+                <div ref="previewRef" class="prose" v-html="previewHtml"></div>
               </div>
-              <label v-else class="field">
-                <span>正文（Markdown）</span>
-                <textarea v-model="editing.content" class="md-input" rows="18" spellcheck="false"></textarea>
-              </label>
+              <div v-else class="field md-field">
+                <div class="md-toolbar">
+                  <span>正文（Markdown）</span>
+                  <div class="md-tools">
+                    <button
+                      type="button"
+                      class="md-tool"
+                      :disabled="mdUploading"
+                      title="选择本地图片，压缩后上传并插入"
+                      @click="mdImageInput?.click()"
+                    >
+                      <MagicIcon :name="mdUploading ? 'clock' : 'image'" :size="13" />
+                      {{ mdUploading ? '上传中' : '图片' }}
+                    </button>
+                    <button type="button" class="md-tool" title="插入 Mermaid 图表模板" @click="insertMermaidTemplate">
+                      <MagicIcon name="layers" :size="13" />
+                      图表
+                    </button>
+                    <button type="button" class="md-tool" title="插入代码块" @click="insertCodeBlock">
+                      <MagicIcon name="code" :size="13" />
+                      代码
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  ref="mdInputRef"
+                  v-model="editing.content"
+                  class="md-input"
+                  rows="18"
+                  spellcheck="false"
+                  placeholder="支持 Markdown；可直接粘贴或拖入图片，也可以用 ```mermaid 画图表"
+                  @paste="onMdPaste"
+                  @dragover.prevent
+                  @drop.prevent="onMdDrop"
+                ></textarea>
+                <p class="md-hint">
+                  粘贴/拖入的图片会自动压缩并上传到 /uploads/，以 Markdown 图片语法插入；```mermaid 代码块在正文与预览中都会渲染为图表。
+                </p>
+                <input ref="mdImageInput" type="file" accept="image/*" hidden @change="onMdImagePick" />
+              </div>
             </div>
           </template>
 
@@ -1370,6 +1507,62 @@ function logout() {
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.85;
+}
+
+/* —— 正文编辑器工具栏 —— */
+.md-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.md-toolbar > span {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: var(--c-gold);
+}
+
+.md-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.md-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 172, 88, 0.22);
+  background: rgba(20, 16, 26, 0.7);
+  color: var(--c-text-2);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+
+.md-tool:hover:not(:disabled) {
+  color: var(--c-gold-2);
+  border-color: rgba(217, 172, 88, 0.55);
+  background: rgba(217, 172, 88, 0.08);
+}
+
+.md-tool:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.md-hint {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--c-muted);
+}
+
+.md-field .md-input {
+  transition: border-color 0.2s var(--ease);
 }
 
 .row-2 {
