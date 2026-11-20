@@ -278,6 +278,7 @@
 
 /* ---------- Mermaid 图表 ---------- */
 .prose .mermaid-wrap {
+  position: relative;
   margin: 1.8em 0;
   padding: 16px 14px;
   border-radius: var(--r-md);
@@ -313,6 +314,38 @@
   max-width: 100%;
   height: auto;
   display: inline-block;
+}
+
+/* 编译成功的图表可点击放大 */
+.prose .mermaid-wrap:has(svg) {
+  cursor: zoom-in;
+  transition: border-color 0.22s var(--ease);
+}
+
+.prose .mermaid-wrap:has(svg):hover {
+  border-color: rgba(217, 172, 88, 0.46);
+}
+
+.prose .mermaid-wrap:has(svg)::after {
+  content: '点击放大';
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 172, 88, 0.24);
+  background: rgba(23, 21, 28, 0.84);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: var(--c-muted);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease);
+  pointer-events: none;
+}
+
+.prose .mermaid-wrap:has(svg):hover::after {
+  opacity: 1;
 }
 
 .prose .mermaid-wrap pre.mermaid.mermaid-error {
