@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import { useReadingStore } from '@/stores/reading'
 
 const reading = useReadingStore()
 
 const toc = computed(() => reading.toc)
+const listRef = ref<HTMLElement | null>(null)
 const active = computed(() => reading.activeId)
 const progress = computed(() => Math.round(reading.progress * 100))
 
@@ -15,6 +16,27 @@ function jump(id: string) {
   const top = el.getBoundingClientRect().top + window.scrollY - 104
   window.scrollTo({ top, behavior: 'smooth' })
 }
+
+/**
+ * 让目录列表内部的滚动条跟随当前高亮项。
+ * 用 container.scrollTo 而不是 scrollIntoView —— 后者会连带滚动整个页面。
+ */
+function centerActive() {
+  const container = listRef.value
+  if (!container) return
+  const current = container.querySelector<HTMLElement>('.toc-item.active')
+  if (!current) return
+  const top = current.offsetTop - (container.clientHeight - current.offsetHeight) / 2
+  container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+}
+
+watch(active, () => {
+  void nextTick(centerActive)
+})
+
+onMounted(() => {
+  void nextTick(centerActive)
+})
 </script>
 
 <template>
@@ -29,7 +51,7 @@ function jump(id: string) {
       <em>{{ progress }}%</em>
     </div>
 
-    <nav v-if="toc.length" class="toc-list">
+    <nav v-if="toc.length" ref="listRef" class="toc-list">
       <button
         v-for="item in toc"
         :key="item.id"
@@ -79,12 +101,15 @@ function jump(id: string) {
 }
 
 .toc-list {
+  position: relative; /* 让 .toc-item 的 offsetTop 以本容器为基准 */
   display: flex;
   flex-direction: column;
   padding: 8px 10px 14px;
   max-height: calc(100vh - 320px);
   overflow-y: auto;
   scrollbar-width: thin;
+  /* 目录项过多时也能一眼看到当前所在位置 */
+  scroll-behavior: smooth;
 }
 
 .toc-item {

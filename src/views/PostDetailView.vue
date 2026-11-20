@@ -2,11 +2,10 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MagicIcon from '@/components/common/MagicIcon.vue'
-import ImageLightbox from '@/components/common/ImageLightbox.vue'
 import CommentSection from '@/components/post/CommentSection.vue'
+import MarkdownContent from '@/components/post/MarkdownContent.vue'
 import { publicApi } from '@/api'
 import { renderMarkdown, readingMinutes } from '@/lib/markdown'
-import { renderMermaidBlocks } from '@/lib/mermaid'
 import { resolveAsset } from '@/lib/asset'
 import { formatDate } from '@/lib/format'
 import { toast } from '@/lib/toast'
@@ -24,8 +23,27 @@ const auth = useAuthStore()
 
 const showTop = ref(false)
 const likeBurst = ref(false)
-const proseRef = ref<HTMLElement | null>(null)
-const lightbox = ref<{ src: string; alt: string } | null>(null)
+
+// —— 手机端目录：右栏在 ≤1180px 隐藏，这里提供一个可展开的目录入口 ——
+const mobileTocOpen = ref(false)
+const isCompact = ref(false)
+let tocMedia: MediaQueryList | null = null
+
+function syncCompact() {
+  isCompact.value = tocMedia?.matches ?? false
+}
+
+function jumpToSection(id: string) {
+  mobileTocOpen.value = false
+  const el = document.getElementById(id)
+  if (!el) return
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 88, behavior: 'smooth' })
+}
+
+watch(mobileTocOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
 
 const post = computed(() => content.allPosts.find((item) => item.id === route.params.id))
 const accessible = computed(() => {
@@ -73,19 +91,9 @@ watch(
     reading.setToc(rendered.value.toc)
     await nextTick()
     syncScroll()
-    // 正文里的 ```mermaid 块在挂载后按需渲染成 SVG
-    void renderMermaidBlocks(proseRef.value)
   },
   { immediate: true },
 )
-
-/** 点击正文图片打开灯箱预览 */
-function onProseClick(event: MouseEvent) {
-  const target = event.target as HTMLElement | null
-  if (target instanceof HTMLImageElement && target.classList.contains('md-image')) {
-    lightbox.value = { src: target.currentSrc || target.src, alt: target.alt }
-  }
-}
 
 watch(
   () => route.params.id,
@@ -158,11 +166,16 @@ async function share() {
 
 onMounted(() => {
   void loadLike()
+  tocMedia = window.matchMedia('(max-width: 1180px)')
+  syncCompact()
+  tocMedia.addEventListener('change', syncCompact)
   window.addEventListener('scroll', syncScroll, { passive: true })
   syncScroll()
 })
 
 onBeforeUnmount(() => {
+  tocMedia?.removeEventListener('change', syncCompact)
+  document.body.style.overflow = ''
   window.removeEventListener('scroll', syncScroll)
   reading.clear()
 })
@@ -223,13 +236,7 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="body mage-card paper-veil">
-      <div ref="proseRef" class="prose" v-html="rendered.html" @click="onProseClick"></div>
-
-      <ImageLightbox
-        :src="lightbox?.src || ''"
-        :alt="lightbox?.alt || ''"
-        @close="lightbox = null"
-      />
+      <MarkdownContent class="prose" :html="rendered.html" />
 
       <div v-if="post.tags.length" class="tags">
         <MagicIcon name="spark" :size="12" />
@@ -266,6 +273,15 @@ onBeforeUnmount(() => {
     <CommentSection :post-id="post.id" />
 
     <div class="floaters">
+      <button
+        v-if="isCompact && reading.toc.length"
+        class="floater"
+        title="本篇目录"
+        aria-label="打开本篇目录"
+        @click="mobileTocOpen = true"
+      >
+        <MagicIcon name="book" :size="17" />
+      </button>
       <transition name="fade">
         <button v-if="showTop" class="floater" title="回到顶部" @click="toTop">
           <MagicIcon name="arrowUp" :size="17" />
@@ -275,6 +291,34 @@ onBeforeUnmount(() => {
         <MagicIcon name="arrowLeft" :size="17" />
       </button>
     </div>
+
+    <Teleport to="body">
+      <Transition name="sheet">
+        <div v-if="mobileTocOpen" class="toc-mask" @click.self="mobileTocOpen = false">
+          <section class="toc-sheet" role="dialog" aria-modal="true" aria-label="本篇目录">
+            <header>
+              <strong>本篇目录</strong>
+              <em>{{ Math.round(reading.progress * 100) }}%</em>
+              <button class="sheet-close" aria-label="关闭目录" @click="mobileTocOpen = false">
+                <MagicIcon name="close" :size="14" />
+              </button>
+            </header>
+            <div class="toc-sheet-list">
+              <button
+                v-for="item in reading.toc"
+                :key="item.id"
+                class="sheet-item"
+                :class="{ active: reading.activeId === item.id, sub: item.level === 3 }"
+                @click="jumpToSection(item.id)"
+              >
+                <span class="dot"></span>
+                <span class="txt">{{ item.text }}</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      </Transition>
+    </Teleport>
   </article>
 </template>
 
@@ -683,5 +727,135 @@ onBeforeUnmount(() => {
     flex-direction: column;
     text-align: center;
   }
+}
+
+/* —— 手机端目录抽屉 —— */
+.toc-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(8, 6, 11, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.toc-sheet {
+  width: 100%;
+  max-height: 68vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px 18px 0 0;
+  border-top: 1px solid rgba(217, 172, 88, 0.26);
+  background:
+    radial-gradient(120% 80% at 80% 0%, rgba(165, 42, 54, 0.18), transparent 60%),
+    linear-gradient(180deg, #241c2c 0%, #17131d 100%);
+  box-shadow: 0 -24px 60px -20px #000;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.toc-sheet header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(217, 172, 88, 0.12);
+}
+
+.toc-sheet header strong {
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--c-paper);
+}
+
+.toc-sheet header em {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 11px;
+  color: var(--c-gold);
+}
+
+.sheet-close {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(217, 172, 88, 0.24);
+  background: rgba(16, 12, 20, 0.7);
+  color: var(--c-text-2);
+  cursor: pointer;
+}
+
+.toc-sheet-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sheet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--c-text-2);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sheet-item.sub {
+  padding-left: 26px;
+  font-size: 12.5px;
+  color: var(--c-muted);
+}
+
+.sheet-item .dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: rgba(217, 172, 88, 0.4);
+}
+
+.sheet-item.active {
+  color: var(--c-gold-2);
+  background: rgba(217, 172, 88, 0.08);
+}
+
+.sheet-item.active .dot {
+  background: var(--c-gold);
+  box-shadow: 0 0 8px rgba(217, 172, 88, 0.7);
+}
+
+.sheet-enter-active,
+.sheet-leave-active {
+  transition: opacity 0.24s var(--ease);
+}
+
+.sheet-enter-active .toc-sheet,
+.sheet-leave-active .toc-sheet {
+  transition: transform 0.28s var(--ease);
+}
+
+.sheet-enter-from,
+.sheet-leave-to {
+  opacity: 0;
+}
+
+.sheet-enter-from .toc-sheet,
+.sheet-leave-to .toc-sheet {
+  transform: translateY(100%);
 }
 </style>

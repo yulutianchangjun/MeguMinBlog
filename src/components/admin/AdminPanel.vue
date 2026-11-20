@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NDrawer, NPopconfirm } from 'naive-ui'
 import MagicIcon from '@/components/common/MagicIcon.vue'
 import ImageUploader from '@/components/admin/ImageUploader.vue'
+import MarkdownContent from '@/components/post/MarkdownContent.vue'
 import { adminApi } from '@/api'
 import { exportJson, exportZip, parseImportFile } from '@/lib/exporter'
 import { formatDate } from '@/lib/format'
 import { API_BASE, apiReady } from '@/lib/http'
 import { fileToCoverBlob } from '@/lib/image'
 import { renderMarkdown, slugify } from '@/lib/markdown'
-import { renderMermaidBlocks } from '@/lib/mermaid'
 import { postFromMarkdown } from '@/lib/post'
 import { resolveAsset } from '@/lib/asset'
 import { STORAGE_PREFIX } from '@/lib/storage'
@@ -180,7 +180,6 @@ const previewHtml = computed(() => (editing.value ? renderMarkdown(editing.value
 // —— 正文编辑器：插入图片 / 图表 / 代码块 ——
 const mdInputRef = ref<HTMLTextAreaElement | null>(null)
 const mdImageInput = ref<HTMLInputElement | null>(null)
-const previewRef = ref<HTMLElement | null>(null)
 const mdUploading = ref(false)
 
 /** 在光标处插入一段 Markdown，并保持光标落在插入内容之后 */
@@ -268,12 +267,6 @@ function insertCodeBlock() {
   insertAtCursor('```ts\n// 在这里写代码\n```')
 }
 
-// 预览里的 mermaid 也要渲染成图
-watch([preview, previewHtml], async () => {
-  if (!preview.value) return
-  await nextTick()
-  void renderMermaidBlocks(previewRef.value)
-})
 
 const draftCollections = computed(() => editing.value?.collections ?? [])
 
@@ -730,7 +723,7 @@ function logout() {
 
               <div v-if="preview" class="preview-box">
                 <h2 class="preview-title">{{ editing.title || '无题' }}</h2>
-                <div ref="previewRef" class="prose" v-html="previewHtml"></div>
+                <MarkdownContent class="prose" :html="previewHtml" />
               </div>
               <div v-else class="field md-field">
                 <div class="md-toolbar">
